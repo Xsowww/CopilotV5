@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PiNotePencilFill, PiPlusBold, PiTrashFill } from "react-icons/pi";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
 import { ActionDialog } from "../../components/common/ActionDialog";
 import type { Note, NoteFolder } from "../../types";
@@ -31,6 +32,8 @@ export const NotesPage = () => {
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<NotesDialogState>({ open: false });
   const [dialogValue, setDialogValue] = useState("");
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const firstFolder = Object.values(notes.folders).find((folder) => folder.parentId === "note-root");
@@ -38,6 +41,20 @@ export const NotesPage = () => {
       setSelectedFolderId(firstFolder.id);
     }
   }, [notes.folders, selectedFolderId]);
+
+  useEffect(() => {
+    const state = location.state as { focusNoteId?: string } | null;
+    if (!state?.focusNoteId) {
+      return;
+    }
+    const note = notes.notes[state.focusNoteId];
+    if (note) {
+      // Modification : sélection automatique d'une note ciblée depuis le tableau de bord.
+      setSelectedFolderId(note.dossierId);
+      setSelectedNoteId(note.id);
+    }
+    navigate(".", { replace: true, state: null });
+  }, [location.state, notes.notes, navigate]);
 
   useEffect(() => {
     if (!dialog.open) {

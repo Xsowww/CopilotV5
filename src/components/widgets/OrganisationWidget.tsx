@@ -10,6 +10,9 @@ interface OrganisationWidgetProps {
   loading?: boolean;
   onOpen?: () => void;
   disabled?: boolean;
+  onEvenementNavigate?: (evenement: Evenement) => void;
+  onTacheNavigate?: (tache: Tache) => void;
+  onRappelNavigate?: (rappel: Rappel) => void;
 }
 
 export const OrganisationWidget = ({
@@ -19,6 +22,9 @@ export const OrganisationWidget = ({
   loading,
   onOpen,
   disabled = false,
+  onEvenementNavigate,
+  onTacheNavigate,
+  onRappelNavigate,
 }: OrganisationWidgetProps) => {
   // Modification : ne conserver que la première entrée de chaque catégorie pour proposer un résumé synthétique.
   const prochainEvenement = evenements[0];
@@ -31,7 +37,14 @@ export const OrganisationWidget = ({
     }
     const date = formatCalendarDate(prochainEvenement.date);
     return (
-      <div className="organisation-widget__highlight">
+      <button
+        type="button"
+        className="organisation-widget__button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onEvenementNavigate?.(prochainEvenement);
+        }}
+      >
         <div className="organisation-widget__badge">
           <span>{date.jour}</span>
           <span>{date.mois}</span>
@@ -42,7 +55,7 @@ export const OrganisationWidget = ({
             {(date.heure ?? "Toute la journée")} · {prochainEvenement.localisation ?? "Lieu à confirmer"}
           </span>
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -52,7 +65,14 @@ export const OrganisationWidget = ({
     }
     const echeance = formatCalendarDate(prochaineTache.echeance);
     return (
-      <div className="organisation-widget__highlight">
+      <button
+        type="button"
+        className="organisation-widget__button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onTacheNavigate?.(prochaineTache);
+        }}
+      >
         <div className={`organisation-widget__pill organisation-widget__pill--${prochaineTache.priorite}`}>
           {prochaineTache.priorite}
         </div>
@@ -62,7 +82,7 @@ export const OrganisationWidget = ({
             Statut : {prochaineTache.statut.replace(/_/g, " ")} · Échéance {echeance.jour} {echeance.mois}
           </span>
         </div>
-      </div>
+      </button>
     );
   };
 
@@ -72,7 +92,14 @@ export const OrganisationWidget = ({
     }
     const date = formatCalendarDate(prochainRappel.date);
     return (
-      <div className="organisation-widget__highlight">
+      <button
+        type="button"
+        className="organisation-widget__button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onRappelNavigate?.(prochainRappel);
+        }}
+      >
         <div className="organisation-widget__badge">
           <span>{date.jour}</span>
           <span>{date.mois}</span>
@@ -81,7 +108,7 @@ export const OrganisationWidget = ({
           <p className="organisation-widget__title">{prochainRappel.titre}</p>
           <span className="organisation-widget__meta">{prochainRappel.description ?? "Pas de description"}</span>
         </div>
-      </div>
+      </button>
     );
   };
 

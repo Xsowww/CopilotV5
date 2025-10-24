@@ -8,9 +8,16 @@ interface ActivityWidgetProps {
   loading?: boolean;
   onOpen?: () => void;
   disabled?: boolean;
+  onActivityNavigate?: (activity: WidgetActivity) => void;
 }
 
-export const ActivityWidget = ({ activities, loading, onOpen, disabled = false }: ActivityWidgetProps) => {
+export const ActivityWidget = ({
+  activities,
+  loading,
+  onOpen,
+  disabled = false,
+  onActivityNavigate,
+}: ActivityWidgetProps) => {
   const highlights = activities.slice(0, 3); // Modification : réduire le flux pour garder le widget léger.
 
   return (
@@ -30,19 +37,28 @@ export const ActivityWidget = ({ activities, loading, onOpen, disabled = false }
         <ul className="widget-list">
           {highlights.map((activity) => (
             <li key={activity.id}>
-              <div className="widget-list__main">
-                <p className="widget-list__title">{activity.titre}</p>
-                <span className="widget-list__meta">
-                  {activity.type === "drive"
-                    ? "Drive"
-                    : activity.type === "organisation"
-                      ? "Organisation"
-                      : "Notes"}
-                  {" · "}
-                  {activity.utilisateur}
-                </span>
-              </div>
-              <span className="widget-list__aside">{formatRelativeDate(activity.date)}</span>
+              <button
+                type="button"
+                className="widget-list__link"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onActivityNavigate?.(activity);
+                }}
+              >
+                <div className="widget-list__main">
+                  <p className="widget-list__title">{activity.titre}</p>
+                  <span className="widget-list__meta">
+                    {activity.type === "drive"
+                      ? "Drive"
+                      : activity.type === "organisation"
+                        ? "Organisation"
+                        : "Notes"}
+                    {" · "}
+                    {activity.utilisateur}
+                  </span>
+                </div>
+                <span className="widget-list__aside">{formatRelativeDate(activity.date)}</span>
+              </button>
             </li>
           ))}
         </ul>

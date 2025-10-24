@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   addDays,
   addWeeks,
@@ -13,6 +13,7 @@ import {
 } from "date-fns";
 import { fr } from "date-fns/locale";
 import { PiCalendarBlankFill, PiCalendarCheckFill, PiCalendarFill, PiPlusBold } from "react-icons/pi";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
 import { ActionDialog } from "../../components/common/ActionDialog";
 import type { Evenement, Rappel, Tache } from "../../types";
@@ -52,6 +53,8 @@ export const OrganisationPage = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [deletion, setDeletion] = useState<DeletionState>({ open: false });
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const events = useMemo(() => organisation.evenements.map((event) => ({ ...event, dateObj: toDate(event.date) })), [
     organisation.evenements,
@@ -201,6 +204,48 @@ export const OrganisationPage = () => {
   const navigateWeek = (direction: "next" | "prev") => {
     setSelectedDate((prev) => (direction === "next" ? addWeeks(prev, 1) : subWeeks(prev, 1)));
   };
+
+  useEffect(() => {
+    const state = location.state as { focusOrganisation?: { type: EditorType; id: string } } | null;
+    if (!state?.focusOrganisation) {
+      return;
+    }
+
+    const { type, id } = state.focusOrganisation;
+    let targetDate: Date | null = null;
+
+    if (type === "evenement") {
+      const existing = organisation.evenements.find((event) => event.id === id);
+      if (existing) {
+        targetDate = parseISO(existing.date);
+        setEditor({ type, data: { ...existing } });
+      }
+    }
+
+    if (type === "tache") {
+      const existing = organisation.taches.find((task) => task.id === id);
+      if (existing) {
+        targetDate = parseISO(existing.date);
+        setEditor({ type, data: { ...existing } });
+      }
+    }
+
+    if (type === "rappel") {
+      const existing = organisation.rappels.find((reminder) => reminder.id === id);
+      if (existing) {
+        targetDate = parseISO(existing.date);
+        setEditor({ type, data: { ...existing } });
+      }
+    }
+
+    if (targetDate) {
+      // Modification : focus automatique sur la date associée à l'élément ouvert depuis le widget.
+      setSelectedDate(targetDate);
+      setView("semaine");
+    }
+
+    navigate(".", { replace: true, state: null });
+  }, [location.state, organisation.evenements, organisation.taches, organisation.rappels, navigate]);
 
   return (
     <div className="organisation-page">

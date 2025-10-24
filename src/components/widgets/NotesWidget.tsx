@@ -9,9 +9,17 @@ interface NotesWidgetProps {
   folders: Record<string, NoteFolder>;
   onOpen?: () => void;
   disabled?: boolean;
+  onItemNavigate?: (note: Note) => void;
 }
 
-export const NotesWidget = ({ notes, loading, folders, onOpen, disabled = false }: NotesWidgetProps) => {
+export const NotesWidget = ({
+  notes,
+  loading,
+  folders,
+  onOpen,
+  disabled = false,
+  onItemNavigate,
+}: NotesWidgetProps) => {
   const principalesNotes = notes.slice(0, 3); // Modification : limiter l'aperçu pour alléger la hauteur du widget.
 
   return (
@@ -34,20 +42,29 @@ export const NotesWidget = ({ notes, loading, folders, onOpen, disabled = false 
             const remainingTags = (note.etiquettes?.length ?? 0) - tags.length;
             return (
               <li key={note.id}>
-                <div className="widget-list__main">
-                  <p className="widget-list__title">{note.titre}</p>
-                  <span className="widget-list__meta">
-                    {folders[note.dossierId]?.nom ?? "Notes"} · {formatRelativeDate(note.misAJourLe)}
-                  </span>
-                </div>
-                {note.etiquettes && note.etiquettes.length > 0 && (
-                  <div className="widget-list__tags">
-                    {tags.map((tag) => (
-                      <span key={tag}>{tag}</span>
-                    ))}
-                    {remainingTags > 0 && <span>+{remainingTags}</span>}
+                <button
+                  type="button"
+                  className="widget-list__link"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onItemNavigate?.(note);
+                  }}
+                >
+                  <div className="widget-list__main">
+                    <p className="widget-list__title">{note.titre}</p>
+                    <span className="widget-list__meta">
+                      {folders[note.dossierId]?.nom ?? "Notes"} · {formatRelativeDate(note.misAJourLe)}
+                    </span>
                   </div>
-                )}
+                  {note.etiquettes && note.etiquettes.length > 0 && (
+                    <div className="widget-list__tags">
+                      {tags.map((tag) => (
+                        <span key={tag}>{tag}</span>
+                      ))}
+                      {remainingTags > 0 && <span>+{remainingTags}</span>}
+                    </div>
+                  )}
+                </button>
               </li>
             );
           })}

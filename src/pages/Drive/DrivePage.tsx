@@ -5,6 +5,7 @@ import {
   PiDotsThreeOutlineFill,
   PiFolderPlusFill,
 } from "react-icons/pi";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
 import { ActionDialog } from "../../components/common/ActionDialog";
 import { DrivePreview } from "../../components/drive/DrivePreview";
@@ -58,6 +59,8 @@ export const DrivePage = () => {
   const [dialogValue, setDialogValue] = useState("");
   const [moveTarget, setMoveTarget] = useState<string>("");
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleClick = () => setContextMenu(initialMenuState);
@@ -73,6 +76,25 @@ export const DrivePage = () => {
       window.removeEventListener("keydown", handleKey);
     };
   }, []);
+
+  useEffect(() => {
+    const state = location.state as { focusDriveId?: string; focusDriveType?: DriveNode["type"] } | null;
+    if (!state?.focusDriveId) {
+      return;
+    }
+
+    const node = drive.nodes[state.focusDriveId];
+    if (node) {
+      // Modification : ouverture automatique d'un élément Drive ciblé depuis le tableau de bord.
+      if (node.type === "dossier") {
+        setCurrentFolderId(node.id);
+      } else {
+        setCurrentFolderId(node.parentId ?? drive.rootId);
+        setPreviewId(node.id);
+      }
+    }
+    navigate(".", { replace: true, state: null });
+  }, [location.state, drive.nodes, drive.rootId, navigate]);
 
   const currentFolder = drive.nodes[currentFolderId] as DriveFolderNode;
 
@@ -209,10 +231,15 @@ export const DrivePage = () => {
   const openContextMenu = (event: React.MouseEvent, nodeId: string | null) => {
     event.preventDefault();
     event.stopPropagation();
+    const padding = 12;
+    const estimatedWidth = 220;
+    const estimatedHeight = 260;
+    const clampedX = Math.max(padding, Math.min(event.clientX, window.innerWidth - estimatedWidth));
+    const clampedY = Math.max(padding, Math.min(event.clientY, window.innerHeight - estimatedHeight));
     setContextMenu({
       visible: true,
-      x: event.clientX,
-      y: event.clientY,
+      x: clampedX,
+      y: clampedY,
       targetId: nodeId,
     });
   };

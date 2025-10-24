@@ -9,7 +9,16 @@ import { DriveWidget } from "../../components/widgets/DriveWidget";
 import { NotesWidget } from "../../components/widgets/NotesWidget";
 import { OrganisationWidget } from "../../components/widgets/OrganisationWidget";
 import { useAppData } from "../../context/AppDataContext";
-import type { Note, WidgetId, WidgetLayout } from "../../types";
+import type {
+  DriveNode,
+  Evenement,
+  Note,
+  Rappel,
+  Tache,
+  WidgetActivity,
+  WidgetId,
+  WidgetLayout,
+} from "../../types";
 import type { ReactNode } from "react";
 
 const columns: (keyof WidgetLayout)[] = ["colonneGauche", "colonneDroite"];
@@ -194,6 +203,35 @@ export const DashboardPage = () => {
     }
   };
 
+  const handleDriveItemNavigate = (item: DriveNode) => {
+    if (isCustomizing) return;
+    // Modification : navigation directe vers l'élément Drive sélectionné depuis le widget.
+    navigate("/drive", { state: { focusDriveId: item.id, focusDriveType: item.type } });
+  };
+
+  const handleNoteNavigate = (note: Note) => {
+    if (isCustomizing) return;
+    // Modification : navigation directe vers la note sélectionnée depuis le widget.
+    navigate("/notes", { state: { focusNoteId: note.id } });
+  };
+
+  const handleOrganisationNavigate = (payload: { type: "evenement" | "tache" | "rappel"; id: string }) => {
+    if (isCustomizing) return;
+    // Modification : navigation directe vers l'événement, la tâche ou le rappel affiché dans le widget Organisation.
+    navigate("/organisation", { state: { focusOrganisation: payload } });
+  };
+
+  const handleActivityNavigate = (activity: WidgetActivity) => {
+    if (isCustomizing) return;
+    const target =
+      activity.type === "drive"
+        ? "/drive"
+        : activity.type === "organisation"
+          ? "/organisation"
+          : "/notes";
+    navigate(target);
+  };
+
   const renderWidget = (widgetId: WidgetId) => {
     const commonProps = {
       onOpen: () => handleWidgetOpen(widgetId),
@@ -202,20 +240,32 @@ export const DashboardPage = () => {
 
     switch (widgetId) {
       case "drive":
-        return <DriveWidget items={driveItems} {...commonProps} />;
+        return <DriveWidget items={driveItems} onItemNavigate={handleDriveItemNavigate} {...commonProps} />;
       case "notes":
-        return <NotesWidget notes={notesList} folders={notes.folders} {...commonProps} />;
+        return (
+          <NotesWidget
+            notes={notesList}
+            folders={notes.folders}
+            onItemNavigate={handleNoteNavigate}
+            {...commonProps}
+          />
+        );
       case "organisation":
         return (
           <OrganisationWidget
             evenements={organisation.evenements}
             taches={organisation.taches}
             rappels={organisation.rappels}
+            onEvenementNavigate={(evenement: Evenement) =>
+              handleOrganisationNavigate({ type: "evenement", id: evenement.id })
+            }
+            onTacheNavigate={(tache: Tache) => handleOrganisationNavigate({ type: "tache", id: tache.id })}
+            onRappelNavigate={(rappel: Rappel) => handleOrganisationNavigate({ type: "rappel", id: rappel.id })}
             {...commonProps}
           />
         );
       case "activite":
-        return <ActivityWidget activities={activities} {...commonProps} />;
+        return <ActivityWidget activities={activities} onActivityNavigate={handleActivityNavigate} {...commonProps} />;
       default:
         return null;
     }

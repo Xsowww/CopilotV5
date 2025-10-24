@@ -9,9 +9,10 @@ interface DriveWidgetProps {
   loading?: boolean;
   onOpen?: () => void;
   disabled?: boolean;
+  onItemNavigate?: (item: DriveNode) => void;
 }
 
-export const DriveWidget = ({ items, loading, onOpen, disabled = false }: DriveWidgetProps) => {
+export const DriveWidget = ({ items, loading, onOpen, disabled = false, onItemNavigate }: DriveWidgetProps) => {
   const latest = useMemo(() => items.slice(0, 3), [items]); // Modification : limiter l'aperçu pour un widget plus fin.
 
   return (
@@ -31,15 +32,24 @@ export const DriveWidget = ({ items, loading, onOpen, disabled = false }: DriveW
         <ul className="widget-list">
           {latest.map((item) => (
             <li key={item.id}>
-              <div className="widget-list__main">
-                <p className="widget-list__title">{item.nom}</p>
-                <span className="widget-list__meta">
-                  {formatRelativeDate(item.misAJourLe)} · {item.type === "dossier" ? "Dossier" : item.extension.toUpperCase()}
+              <button
+                type="button"
+                className="widget-list__link"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onItemNavigate?.(item);
+                }}
+              >
+                <div className="widget-list__main">
+                  <p className="widget-list__title">{item.nom}</p>
+                  <span className="widget-list__meta">
+                    {formatRelativeDate(item.misAJourLe)} · {item.type === "dossier" ? "Dossier" : item.extension.toUpperCase()}
+                  </span>
+                </div>
+                <span className="widget-list__aside">
+                  {item.type === "fichier" ? formatWeight(item.poidsMo) : item.partage ? "Partagé" : "Privé"}
                 </span>
-              </div>
-              <span className="widget-list__aside">
-                {item.type === "fichier" ? formatWeight(item.poidsMo) : item.partage ? "Partagé" : "Privé"}
-              </span>
+              </button>
             </li>
           ))}
         </ul>
