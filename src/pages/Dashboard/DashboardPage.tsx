@@ -44,8 +44,33 @@ const cloneLayout = (layout: WidgetLayout): WidgetLayout => ({
   colonneDroite: [...layout.colonneDroite],
 });
 
-const findContainerForWidget = (layout: WidgetLayout, widgetId: WidgetId) =>
-  (layout.colonneGauche.includes(widgetId) ? "colonneGauche" : "colonneDroite") as keyof WidgetLayout;
+// Modification : sécurisation du calcul de conteneur pour éviter le blocage du drag & drop.
+const findContainerForWidget = (layout: WidgetLayout, widgetId: string | WidgetId):
+  | keyof WidgetLayout
+  | null => {
+  if (layout.colonneGauche.includes(widgetId as WidgetId)) {
+    return "colonneGauche";
+  }
+  if (layout.colonneDroite.includes(widgetId as WidgetId)) {
+    return "colonneDroite";
+  }
+  return null;
+};
+
+const resolveOverContainer = (
+  layout: WidgetLayout,
+  over: DragEndEvent["over"] | DragOverEvent["over"]
+): keyof WidgetLayout | null => {
+  if (!over) return null;
+  if (typeof over.id === "string") {
+    const directMatch = findContainerForWidget(layout, over.id);
+    if (directMatch) {
+      return directMatch;
+    }
+  }
+  const overData = over.data?.current as { sortable?: { containerId?: keyof WidgetLayout } } | undefined;
+  return overData?.sortable?.containerId ?? null;
+};
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
@@ -73,7 +98,11 @@ export const DashboardPage = () => {
     if (!over) return;
     setLocalLayout((prev) => {
       const activeContainer = findContainerForWidget(prev, active.id as WidgetId);
-      const overContainer = findContainerForWidget(prev, over.id as WidgetId);
+      const overContainer = resolveOverContainer(prev, over);
+
+      if (!activeContainer || !overContainer) {
+        return prev;
+      }
 
       if (activeContainer === overContainer) {
         const items = [...prev[activeContainer]];
@@ -96,16 +125,8 @@ export const DashboardPage = () => {
     if (!over) return;
     setLocalLayout((prev) => {
       const activeContainer = findContainerForWidget(prev, active.id as WidgetId);
-      const overData = over.data?.current as { sortable?: { containerId?: keyof WidgetLayout } } | undefined;
-      const containerFromSortable = overData?.sortable?.containerId as keyof WidgetLayout | undefined;
-      const overContainer =
-        containerFromSortable ??
-        (prev.colonneGauche.includes(over.id as WidgetId)
-          ? "colonneGauche"
-          : prev.colonneDroite.includes(over.id as WidgetId)
-            ? "colonneDroite"
-            : undefined);
-      if (!overContainer || activeContainer === overContainer) {
+      const overContainer = resolveOverContainer(prev, over);
+      if (!activeContainer || !overContainer || activeContainer === overContainer) {
         return prev;
       }
       const activeItems = [...prev[activeContainer]];
