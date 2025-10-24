@@ -603,48 +603,92 @@ button {
   font-size: 0.75rem;
 }
 
-.copilot-chatbot {
+.copilot-launcher-wrapper {
   position: fixed;
-  right: 48px;
-  bottom: 40px;
-  width: 320px;
-  border-radius: 20px;
-  background: rgba(7, 14, 32, 0.82);
+  right: 40px;
+  bottom: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  z-index: 30;
+}
+
+.copilot-launcher {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: radial-gradient(circle at 20% 20%, rgba(102, 148, 255, 0.85), rgba(54, 87, 214, 0.75));
+  box-shadow: 0 18px 32px -18px rgba(8, 16, 40, 0.85);
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.copilot-launcher:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 40px -18px rgba(8, 16, 40, 0.95);
+}
+
+.copilot-chatbot {
+  width: 360px;
+  border-radius: 22px;
+  background: rgba(10, 18, 40, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 32px 54px -26px rgba(5, 12, 28, 0.82);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  backdrop-filter: blur(22px);
-  z-index: 20;
+  backdrop-filter: blur(28px);
+}
+
+.copilot-chatbot--collapsed .copilot-chatbot__messages,
+.copilot-chatbot--collapsed .copilot-chatbot__form {
+  display: none;
 }
 
 .copilot-chatbot__header {
   padding: 16px 20px;
-  background: linear-gradient(120deg, rgba(75, 109, 255, 0.5), rgba(59, 89, 196, 0.2));
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(130deg, rgba(94, 134, 255, 0.6), rgba(66, 98, 207, 0.25));
 }
 
 .copilot-chatbot__title {
   font-weight: 600;
+  font-size: 1rem;
 }
 
 .copilot-chatbot__subtitle {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.68);
 }
 
-.copilot-chatbot__status {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: rgba(255, 255, 255, 0.65);
+.copilot-chatbot__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copilot-chatbot__control {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease;
+}
+
+.copilot-chatbot__control:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .copilot-chatbot__messages {
-  max-height: 260px;
+  max-height: 280px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -663,12 +707,12 @@ button {
 
 .copilot-chatbot__bubble--assistant {
   align-self: flex-start;
-  background: rgba(94, 123, 255, 0.25);
+  background: rgba(94, 123, 255, 0.28);
 }
 
 .copilot-chatbot__bubble--user {
   align-self: flex-end;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .copilot-chatbot__bubble span {
@@ -680,7 +724,7 @@ button {
   display: flex;
   gap: 12px;
   padding: 16px 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .copilot-chatbot__form input {
@@ -758,5 +802,628 @@ button {
     flex-direction: column;
     align-items: flex-start;
     gap: 16px;
+  }
+}
+
+.btn-tertiary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.8rem;
+}
+
+.btn-tertiary:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.dashboard-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.dashboard-page__actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-grid--editing .widget-wrapper {
+  position: relative;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.widget-wrapper {
+  position: relative;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.widget-wrapper--editing {
+  cursor: grab;
+}
+
+.widget-wrapper__hint {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.dashboard-widget--dragging {
+  opacity: 0.7;
+}
+
+.widget-card--interactive {
+  cursor: pointer;
+}
+
+.widget-card--interactive:not(.widget-card--disabled):hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.widget-card--disabled {
+  opacity: 0.75;
+  cursor: default;
+}
+
+.topbar__profile {
+  position: relative;
+}
+
+.profile-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  width: 340px;
+  background: rgba(10, 18, 40, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 22px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 28px 52px -28px rgba(5, 14, 30, 0.72);
+  backdrop-filter: blur(22px);
+  z-index: 25;
+}
+
+.profile-menu h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.profile-menu form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-menu label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.profile-menu input,
+.profile-menu textarea,
+.profile-menu select {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.profile-menu textarea {
+  resize: vertical;
+}
+
+.profile-menu__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.drive-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.drive-breadcrumb__item {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.drive-breadcrumb__item:disabled {
+  opacity: 0.6;
+}
+
+.drive-table__row {
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.drive-table__row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.drive-table__row span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.context-menu {
+  position: fixed;
+  min-width: 220px;
+  background: rgba(12, 20, 48, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 22px 42px -24px rgba(8, 16, 40, 0.75);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 40;
+}
+
+.context-menu button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.context-menu button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.organisation-page__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  gap: 20px;
+}
+
+.organisation-page__toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.organisation-page__view-switcher {
+  display: flex;
+  gap: 8px;
+}
+
+.organisation-page__date-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.organisation-calendar {
+  background: rgba(9, 16, 40, 0.35);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.calendar-month {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.calendar-month__cell {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  min-height: 120px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  border: 1px solid transparent;
+  text-align: left;
+}
+
+.calendar-month__cell--active {
+  border-color: rgba(102, 148, 255, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(102, 148, 255, 0.4);
+}
+
+.calendar-month__cell--muted {
+  opacity: 0.55;
+}
+
+.calendar-month__date {
+  font-weight: 600;
+}
+
+.calendar-month__event {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 10px;
+  background: rgba(102, 148, 255, 0.18);
+  font-size: 0.75rem;
+}
+
+.calendar-month__more {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.calendar-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.calendar-week__column {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calendar-week__events {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.calendar-week__event,
+.calendar-week__add {
+  text-align: left;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(102, 148, 255, 0.18);
+  font-size: 0.85rem;
+}
+
+.calendar-week__add {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.calendar-day {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.calendar-day__events {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calendar-day__event,
+.calendar-day__add {
+  text-align: left;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(102, 148, 255, 0.18);
+}
+
+.calendar-day__add {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.organisation-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.organisation-sidebar section {
+  background: rgba(9, 16, 40, 0.35);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.organisation-sidebar header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.organisation-sidebar__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.organisation-sidebar__list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.organisation-sidebar__list button {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 10px;
+  text-align: left;
+}
+
+.organisation-sidebar__list--simple button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.organisation-sidebar__delete {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255, 107, 129, 0.25);
+}
+
+.organisation-editor {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 8, 18, 0.7);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+}
+
+.organisation-editor__content {
+  width: min(480px, 90vw);
+  background: rgba(10, 18, 40, 0.95);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 32px 64px -28px rgba(3, 10, 24, 0.85);
+}
+
+.organisation-editor__content header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.organisation-editor__content header button {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.organisation-editor form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.organisation-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.organisation-editor input,
+.organisation-editor textarea,
+.organisation-editor select {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  padding: 10px 12px;
+}
+
+.organisation-editor__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.organisation-editor__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.organisation-editor footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.notes-page {
+  display: grid;
+  grid-template-columns: 240px 280px 1fr;
+  gap: 20px;
+  min-height: 520px;
+}
+
+.notes-page__sidebar,
+.notes-page__list,
+.notes-page__content {
+  background: rgba(9, 16, 40, 0.35);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notes-page__sidebar header,
+.notes-page__list header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notes-page__folder-button {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.82);
+  margin-bottom: 6px;
+}
+
+.notes-page__folder-button--active {
+  background: rgba(102, 148, 255, 0.25);
+}
+
+.notes-page__list-items {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.notes-page__item {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.notes-page__item--active {
+  background: rgba(102, 148, 255, 0.22);
+}
+
+.notes-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.notes-editor__title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+}
+
+.notes-editor__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notes-editor__meta select {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 8px 10px;
+  color: var(--text-primary);
+}
+
+.notes-editor__textarea {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  color: var(--text-primary);
+  resize: none;
+}
+
+@media (max-width: 1280px) {
+  .notes-page {
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "sidebar list"
+      "sidebar content";
+  }
+
+  .notes-page__sidebar {
+    grid-area: sidebar;
+  }
+
+  .notes-page__list {
+    grid-area: list;
+  }
+
+  .notes-page__content {
+    grid-area: content;
+  }
+}
+
+@media (max-width: 960px) {
+  .copilot-launcher-wrapper {
+    right: 20px;
+    bottom: 20px;
+  }
+
+  .copilot-chatbot {
+    width: min(320px, 90vw);
+  }
+
+  .organisation-page__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .notes-page {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "sidebar"
+      "list"
+      "content";
   }
 }

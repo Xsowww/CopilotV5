@@ -1,14 +1,17 @@
 import { PiNotebookFill } from "react-icons/pi";
 import { WidgetCard } from "../common/WidgetCard";
 import { formatRelativeDate } from "../../utils/formatters";
-import type { Note } from "../../types";
+import type { Note, NoteFolder } from "../../types";
 
 interface NotesWidgetProps {
   notes: Note[];
   loading?: boolean;
+  folders: Record<string, NoteFolder>;
+  onOpen?: () => void;
+  disabled?: boolean;
 }
 
-export const NotesWidget = ({ notes, loading }: NotesWidgetProps) => {
+export const NotesWidget = ({ notes, loading, folders, onOpen, disabled = false }: NotesWidgetProps) => {
   const principalesNotes = notes.slice(0, 4);
 
   return (
@@ -17,6 +20,8 @@ export const NotesWidget = ({ notes, loading }: NotesWidgetProps) => {
       description="Mises à jour récentes"
       icone={<PiNotebookFill size={24} />}
       accent="rouge"
+      onClick={onOpen}
+      disabled={disabled}
     >
       {loading ? (
         <p className="widget-card__empty">Chargement…</p>
@@ -29,7 +34,7 @@ export const NotesWidget = ({ notes, loading }: NotesWidgetProps) => {
               <div>
                 <p className="notes-widget__title">{note.titre}</p>
                 <span className="notes-widget__meta">
-                  {note.dossier} · {formatRelativeDate(note.misAJourLe)}
+                  {folders[note.dossierId]?.nom ?? "Notes"} · {formatRelativeDate(note.misAJourLe)}
                 </span>
               </div>
               {note.etiquettes && note.etiquettes.length > 0 && (

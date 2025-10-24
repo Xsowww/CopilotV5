@@ -1,72 +1,173 @@
-import { addHours, formatISO, subDays } from "date-fns";
+import { addDays, addHours, formatISO, subDays } from "date-fns";
 import type {
   ChatMessage,
-  DriveItem,
+  DriveFileNode,
+  DriveFolderNode,
+  DriveNode,
   Evenement,
   Note,
+  NoteFolder,
   Rappel,
   Tache,
+  UserProfile,
   WidgetActivity,
 } from "../types";
 
 const now = new Date();
 
-export const driveItems: DriveItem[] = [
-  {
-    id: "drive-1",
+const driveFolders: Record<string, DriveFolderNode> = {
+  "drive-root": {
+    id: "drive-root",
+    nom: "Copilot Drive",
+    type: "dossier",
+    parentId: null,
+    enfants: ["drive-cours", "drive-projet", "drive-budget", "drive-doc-1"],
+    partage: true,
+    misAJourLe: formatISO(now),
+  },
+  "drive-cours": {
+    id: "drive-cours",
     nom: "Cours - Intelligence artificielle",
     type: "dossier",
-    derniereModification: formatISO(now),
-    proprietaire: "Léo Martin",
+    parentId: "drive-root",
+    enfants: ["drive-cours-notes", "drive-doc-3"],
     partage: true,
-  },
-  {
-    id: "drive-2",
-    nom: "Compte rendu séance 5.pdf",
-    type: "pdf",
-    derniereModification: formatISO(subDays(now, 1)),
-    proprietaire: "Léo Martin",
-    partage: false,
-    poidsMo: 2.3,
-  },
-  {
-    id: "drive-3",
-    nom: "Tableur budget BDE.xlsx",
-    type: "tableur",
-    derniereModification: formatISO(subDays(now, 2)),
-    proprietaire: "Equipe Copilot",
-    partage: true,
-    poidsMo: 1.1,
-  },
-];
-
-export const notes: Note[] = [
-  {
-    id: "note-1",
-    titre: "Objectif VR",
-    dossier: "Notes de projet",
-    contenu:
-      "Améliorer le retour d'expérience et prévoir un test utilisateur grandeur nature en novembre.",
-    misAJourLe: formatISO(addHours(now, -3)),
-    etiquettes: ["Projet", "Innovation"],
-  },
-  {
-    id: "note-2",
-    titre: "Cours de cybersécurité",
-    dossier: "Cours",
-    contenu:
-      "Rappeler les bonnes pratiques: MFA obligatoire, chiffrement disque, sauvegardes chiffrées.",
     misAJourLe: formatISO(subDays(now, 1)),
   },
-  {
-    id: "note-3",
-    titre: "To-do association",
-    dossier: "Association étudiante",
-    contenu: "1. Finaliser la campagne d'adhésion\n2. Préparer la soirée d'accueil",
+  "drive-cours-notes": {
+    id: "drive-cours-notes",
+    nom: "Notes de cours",
+    type: "dossier",
+    parentId: "drive-cours",
+    enfants: [],
+    partage: false,
     misAJourLe: formatISO(subDays(now, 2)),
-    etiquettes: ["Urgent"],
   },
-];
+  "drive-projet": {
+    id: "drive-projet",
+    nom: "Projet Copilot",
+    type: "dossier",
+    parentId: "drive-root",
+    enfants: ["drive-doc-4"],
+    partage: true,
+    misAJourLe: formatISO(subDays(now, 2)),
+  },
+  "drive-budget": {
+    id: "drive-budget",
+    nom: "Budget BDE",
+    type: "dossier",
+    parentId: "drive-root",
+    enfants: [],
+    partage: false,
+    misAJourLe: formatISO(subDays(now, 3)),
+  },
+};
+
+const driveFiles: Record<string, DriveFileNode> = {
+  "drive-doc-1": {
+    id: "drive-doc-1",
+    nom: "Présentation rentrée.pdf",
+    type: "fichier",
+    parentId: "drive-root",
+    extension: "pdf",
+    poidsMo: 3.2,
+    partage: true,
+    misAJourLe: formatISO(subDays(now, 1)),
+  },
+  "drive-doc-2": {
+    id: "drive-doc-2",
+    nom: "Compte rendu séance 5.pdf",
+    type: "fichier",
+    parentId: "drive-projet",
+    extension: "pdf",
+    poidsMo: 2.4,
+    partage: false,
+    misAJourLe: formatISO(subDays(now, 4)),
+  },
+  "drive-doc-3": {
+    id: "drive-doc-3",
+    nom: "Synthèse chapitre 2.docx",
+    type: "fichier",
+    parentId: "drive-cours",
+    extension: "docx",
+    poidsMo: 1.1,
+    partage: false,
+    misAJourLe: formatISO(subDays(now, 1)),
+  },
+  "drive-doc-4": {
+    id: "drive-doc-4",
+    nom: "Roadmap Copilot.xlsx",
+    type: "fichier",
+    parentId: "drive-projet",
+    extension: "xlsx",
+    poidsMo: 0.8,
+    partage: true,
+    misAJourLe: formatISO(subDays(now, 2)),
+  },
+};
+
+export const driveInitialState: { rootId: string; nodes: Record<string, DriveNode> } = {
+  rootId: "drive-root",
+  nodes: { ...driveFolders, ...driveFiles },
+};
+
+export const noteFolders: Record<string, NoteFolder> = {
+  "note-root": {
+    id: "note-root",
+    nom: "Toutes les notes",
+    parentId: null,
+    enfants: ["note-projet", "note-cours", "note-association"],
+  },
+  "note-projet": {
+    id: "note-projet",
+    nom: "Notes de projet",
+    parentId: "note-root",
+    enfants: [],
+  },
+  "note-cours": {
+    id: "note-cours",
+    nom: "Cours",
+    parentId: "note-root",
+    enfants: [],
+  },
+  "note-association": {
+    id: "note-association",
+    nom: "Association étudiante",
+    parentId: "note-root",
+    enfants: [],
+  },
+};
+
+export const noteInitialState: { folders: Record<string, NoteFolder>; notes: Record<string, Note> } = {
+  folders: noteFolders,
+  notes: {
+    "note-1": {
+      id: "note-1",
+      titre: "Objectif VR",
+      dossierId: "note-projet",
+      contenu:
+        "Améliorer le retour d'expérience et prévoir un test utilisateur grandeur nature en novembre.",
+      misAJourLe: formatISO(addHours(now, -3)),
+      etiquettes: ["Projet", "Innovation"],
+    },
+    "note-2": {
+      id: "note-2",
+      titre: "Cours de cybersécurité",
+      dossierId: "note-cours",
+      contenu:
+        "Rappeler les bonnes pratiques: MFA obligatoire, chiffrement disque, sauvegardes chiffrées.",
+      misAJourLe: formatISO(subDays(now, 1)),
+    },
+    "note-3": {
+      id: "note-3",
+      titre: "To-do association",
+      dossierId: "note-association",
+      contenu: "1. Finaliser la campagne d'adhésion\n2. Préparer la soirée d'accueil",
+      misAJourLe: formatISO(subDays(now, 2)),
+      etiquettes: ["Urgent"],
+    },
+  },
+};
 
 export const evenements: Evenement[] = [
   {
@@ -86,6 +187,15 @@ export const evenements: Evenement[] = [
     localisation: "Amphi 3",
     description: "Séance animée par le Pr. Girard",
     categorie: "Cours",
+  },
+  {
+    id: "event-3",
+    titre: "Atelier design iCloud",
+    date: formatISO(addDays(now, 2)),
+    heure: "09:30",
+    localisation: "Studio 2",
+    description: "Atelier pratique pour calquer l'UI iCloud",
+    categorie: "Atelier",
   },
 ];
 
@@ -163,3 +273,12 @@ export const initialMessages: ChatMessage[] = [
     horodatage: formatISO(now),
   },
 ];
+
+export const defaultProfile: UserProfile = {
+  id: "user-1",
+  nom: "Léo Martin",
+  email: "leo.martin@copilot.app",
+  avatarUrl: "https://i.pravatar.cc/128?img=12",
+  bio: "Étudiant passionné de design et de productivité.",
+  statut: "Disponible",
+};

@@ -8,6 +8,8 @@ interface OrganisationWidgetProps {
   taches: Tache[];
   rappels: Rappel[];
   loading?: boolean;
+  onOpen?: () => void;
+  disabled?: boolean;
 }
 
 export const OrganisationWidget = ({
@@ -15,6 +17,8 @@ export const OrganisationWidget = ({
   taches,
   rappels,
   loading,
+  onOpen,
+  disabled = false,
 }: OrganisationWidgetProps) => {
   const prochainsEvenements = evenements.slice(0, 2);
   const prochainesTaches = taches.slice(0, 2);
@@ -26,6 +30,8 @@ export const OrganisationWidget = ({
       description="Événements et rappels à venir"
       icone={<MdOutlineCalendarMonth size={24} />}
       accent="jaune"
+      onClick={onOpen}
+      disabled={disabled}
     >
       {loading ? (
         <p className="widget-card__empty">Chargement…</p>

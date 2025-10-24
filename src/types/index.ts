@@ -1,23 +1,45 @@
 export type Priority = "faible" | "normale" | "haute";
 export type TaskStatus = "pas_commence" | "en_cours" | "termine";
 
-export interface DriveItem {
+export type DriveNodeType = "dossier" | "fichier";
+
+export interface BaseDriveNode {
   id: string;
   nom: string;
-  type: "dossier" | "document" | "tableur" | "presentation" | "pdf" | "autre";
-  derniereModification: string;
-  proprietaire: string;
-  partage: boolean;
-  poidsMo?: number;
+  type: DriveNodeType;
+  parentId: string | null;
+  misAJourLe: string;
 }
+
+export interface DriveFileNode extends BaseDriveNode {
+  type: "fichier";
+  extension: string;
+  poidsMo: number;
+  partage: boolean;
+}
+
+export interface DriveFolderNode extends BaseDriveNode {
+  type: "dossier";
+  enfants: string[];
+  partage: boolean;
+}
+
+export type DriveNode = DriveFileNode | DriveFolderNode;
 
 export interface Note {
   id: string;
   titre: string;
-  dossier: string;
+  dossierId: string;
   contenu: string;
   misAJourLe: string;
   etiquettes?: string[];
+}
+
+export interface NoteFolder {
+  id: string;
+  nom: string;
+  parentId: string | null;
+  enfants: string[];
 }
 
 export interface OrganisationItemBase {
@@ -57,4 +79,25 @@ export interface ChatMessage {
   role: "utilisateur" | "assistant";
   contenu: string;
   horodatage: string;
+}
+
+export interface UserProfile {
+  id: string;
+  nom: string;
+  email: string;
+  avatarUrl: string;
+  bio?: string;
+  statut?: string;
+}
+
+export type WidgetId = "drive" | "notes" | "organisation" | "activite";
+
+export interface WidgetLayout {
+  colonneGauche: WidgetId[];
+  colonneDroite: WidgetId[];
+}
+
+export interface ClipboardState {
+  elementId: string | null;
+  mode: "copy" | "cut" | null;
 }

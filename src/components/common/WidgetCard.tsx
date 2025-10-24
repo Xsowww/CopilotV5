@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import type { PropsWithChildren, ReactNode } from "react";
+import type { KeyboardEvent, PropsWithChildren, ReactNode } from "react";
 
 export type WidgetAccent = "bleu" | "jaune" | "rouge" | "vert";
 
@@ -10,6 +10,8 @@ interface WidgetCardProps {
   accent?: WidgetAccent;
   actions?: ReactNode;
   className?: string;
+  onClick?: () => void;
+  disabled?: boolean;
 }
 
 export const WidgetCard = ({
@@ -19,12 +21,31 @@ export const WidgetCard = ({
   actions,
   accent = "bleu",
   className,
+  onClick,
+  disabled = false,
   children,
 }: PropsWithChildren<WidgetCardProps>) => {
+  const interactive = Boolean(onClick) && !disabled;
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!interactive) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick?.();
+    }
+  };
+
   return (
     <section
-      className={clsx("widget-card", className)}
+      className={clsx("widget-card", className, {
+        "widget-card--interactive": Boolean(onClick),
+        "widget-card--disabled": disabled,
+      })}
       data-accent={accent}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      onClick={interactive ? onClick : undefined}
+      onKeyDown={handleKeyDown}
     >
       <header className="widget-card__header">
         <div className="widget-card__title">
