@@ -31,9 +31,17 @@
   padding: 0;
 }
 
+/* Modification : garantir que la surface occupe toujours la totalité de l'écran. */
 html,
 body {
-  min-height: 100%;
+  min-height: 100vh;
+  width: 100%;
+}
+
+#root {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
 }
 
 body {
@@ -88,15 +96,16 @@ label {
   color: var(--text-secondary);
 }
 
+/* Modification : mise à l'échelle fluide de la grille principale sur toute la largeur disponible. */
 .app-shell {
   display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 28px;
+  grid-template-columns: clamp(260px, 24vw, 320px) 1fr;
+  gap: clamp(20px, 3vw, 32px);
   min-height: 100vh;
-  padding: 32px;
-  max-width: 1440px;
-  margin: 0 auto;
-  align-items: flex-start;
+  padding: clamp(16px, 4vw, 40px);
+  width: 100%;
+  align-items: stretch;
+  flex: 1;
 }
 
 .sidebar {
@@ -168,11 +177,11 @@ label {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: clamp(20px, 3vw, 32px);
   background: linear-gradient(150deg, rgba(19, 46, 112, 0.85), rgba(9, 24, 72, 0.82));
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-strong);
-  padding: 32px;
+  padding: clamp(20px, 3vw, 32px);
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   backdrop-filter: blur(var(--glass-blur));
@@ -191,7 +200,9 @@ label {
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: clamp(20px, 3vw, 32px);
+  flex: 1;
+  min-height: 0;
 }
 
 .topbar {
@@ -367,11 +378,10 @@ label {
   background: linear-gradient(160deg, rgba(36, 74, 160, 0.85), rgba(15, 40, 102, 0.85));
   border-radius: var(--radius-md);
   border: 1px solid var(--border-strong);
-  padding: 24px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  min-height: 220px;
+  gap: 14px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   backdrop-filter: blur(var(--glass-blur));
   color: var(--text-primary);
@@ -422,15 +432,177 @@ label {
   font-size: 1rem;
 }
 
+/* Modification : formats compacts pour les listes des widgets. */
+.widget-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.widget-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.widget-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.widget-list__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: clamp(120px, 60%, 220px);
+}
+
+.widget-list__main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.widget-list__meta {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.widget-list__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.widget-list__tags span {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 0.75rem;
+}
+
+.widget-list__aside {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Modification : synthèse compacte du widget Organisation. */
+.organisation-widget {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.organisation-widget__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-width: 0;
+}
+
+.organisation-widget__section h3 {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.organisation-widget__highlight {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.organisation-widget__badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: rgba(90, 162, 255, 0.2);
+  border: 1px solid rgba(90, 162, 255, 0.4);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.organisation-widget__details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.organisation-widget__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.organisation-widget__meta {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.organisation-widget__pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.organisation-widget__pill--haute {
+  background: rgba(255, 134, 154, 0.25);
+  color: #ffccd5;
+}
+
+.organisation-widget__pill--normale {
+  background: rgba(90, 162, 255, 0.18);
+  color: #c9e1ff;
+}
+
+.organisation-widget__pill--basse {
+  background: rgba(93, 216, 169, 0.22);
+  color: #c6f5e6;
+}
+
 .widget-card__empty {
   color: var(--text-tertiary);
   font-size: 0.95rem;
 }
 
+/* Modification : mise en page compacte du tableau de bord pour éviter le scroll inutile. */
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
 }
 
 .dashboard-page__actions {
@@ -447,15 +619,17 @@ label {
   gap: 12px;
 }
 
+/* Modification : resserrer le maillage des widgets. */
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  gap: 20px;
+  align-content: start;
 }
 
 .dashboard-grid__column {
   display: grid;
-  gap: 24px;
+  gap: 20px;
 }
 
 .dashboard-widget--dragging {
@@ -577,7 +751,8 @@ label {
   box-shadow: var(--shadow-soft);
   list-style: none;
   padding: 8px 0;
-  z-index: 30;
+  /* Modification : placer le menu contextuel au-dessus du chatbot. */
+  z-index: 80;
   min-width: 200px;
   backdrop-filter: blur(calc(var(--glass-blur) * 0.5));
 }
@@ -823,6 +998,7 @@ label {
   display: grid;
   grid-template-columns: 1fr 320px;
   gap: 24px;
+  min-height: 0;
 }
 
 .organisation-calendar,
@@ -834,12 +1010,13 @@ label {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-height: 0;
 }
 
 .calendar-month {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .calendar-month__cell {
@@ -848,11 +1025,12 @@ label {
   gap: 6px;
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 12px;
+  padding: 10px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.18);
-  min-height: 112px;
+  min-height: 96px;
+  width: 100%;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
@@ -878,6 +1056,10 @@ label {
   background: var(--accent-soft);
   color: var(--accent-strong);
   font-size: 0.75rem;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .calendar-month__more {
@@ -888,18 +1070,31 @@ label {
 .calendar-week {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
 .calendar-week__column {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   padding: 12px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.12);
   transition: background 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+}
+
+.calendar-week__column header span {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.calendar-week__events {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
 }
 
 .calendar-week__event {
@@ -911,6 +1106,19 @@ label {
   color: var(--text-primary);
   border-radius: var(--radius-sm);
   padding: 8px 10px;
+  min-width: 0;
+}
+
+.calendar-week__event strong {
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-week__event span {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
 }
 
 .calendar-week__add,
@@ -951,11 +1159,23 @@ label {
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.1);
   transition: background 0.2s ease, border-color 0.2s ease;
+  min-width: 0;
 }
 
 .calendar-day__event:hover {
   background: rgba(255, 255, 255, 0.16);
   border-color: var(--accent);
+}
+
+.calendar-day__event strong {
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-day__event small {
+  color: var(--text-tertiary);
 }
 
 .organisation-sidebar header {
@@ -1309,6 +1529,10 @@ label {
   .organisation-sidebar {
     order: 2;
   }
+
+  .organisation-widget {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
@@ -1354,6 +1578,10 @@ label {
   .calendar-week,
   .dashboard-grid {
     gap: 16px;
+  }
+
+  .organisation-widget {
+    grid-template-columns: 1fr;
   }
 
   .copilot-chatbot {

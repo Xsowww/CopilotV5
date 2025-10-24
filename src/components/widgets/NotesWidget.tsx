@@ -12,7 +12,7 @@ interface NotesWidgetProps {
 }
 
 export const NotesWidget = ({ notes, loading, folders, onOpen, disabled = false }: NotesWidgetProps) => {
-  const principalesNotes = notes.slice(0, 4);
+  const principalesNotes = notes.slice(0, 3); // Modification : limiter l'aperçu pour alléger la hauteur du widget.
 
   return (
     <WidgetCard
@@ -28,24 +28,29 @@ export const NotesWidget = ({ notes, loading, folders, onOpen, disabled = false 
       ) : principalesNotes.length === 0 ? (
         <p className="widget-card__empty">Aucune note pour le moment.</p>
       ) : (
-        <ul className="notes-widget">
-          {principalesNotes.map((note) => (
-            <li key={note.id}>
-              <div>
-                <p className="notes-widget__title">{note.titre}</p>
-                <span className="notes-widget__meta">
-                  {folders[note.dossierId]?.nom ?? "Notes"} · {formatRelativeDate(note.misAJourLe)}
-                </span>
-              </div>
-              {note.etiquettes && note.etiquettes.length > 0 && (
-                <div className="notes-widget__tags">
-                  {note.etiquettes.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
+        <ul className="widget-list">
+          {principalesNotes.map((note) => {
+            const tags = note.etiquettes?.slice(0, 2) ?? [];
+            const remainingTags = (note.etiquettes?.length ?? 0) - tags.length;
+            return (
+              <li key={note.id}>
+                <div className="widget-list__main">
+                  <p className="widget-list__title">{note.titre}</p>
+                  <span className="widget-list__meta">
+                    {folders[note.dossierId]?.nom ?? "Notes"} · {formatRelativeDate(note.misAJourLe)}
+                  </span>
                 </div>
-              )}
-            </li>
-          ))}
+                {note.etiquettes && note.etiquettes.length > 0 && (
+                  <div className="widget-list__tags">
+                    {tags.map((tag) => (
+                      <span key={tag}>{tag}</span>
+                    ))}
+                    {remainingTags > 0 && <span>+{remainingTags}</span>}
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </WidgetCard>

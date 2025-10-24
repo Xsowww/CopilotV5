@@ -165,13 +165,13 @@ export const DashboardPage = () => {
     return nodes
       .filter((node) => node.id !== drive.rootId)
       .sort((a, b) => b.misAJourLe.localeCompare(a.misAJourLe))
-      .slice(0, 5);
+      .slice(0, 3); // Modification : limiter l'aperçu pour conserver des widgets compacts.
   }, [drive]);
 
   const notesList = useMemo<Note[]>(() => {
     return Object.values(notes.notes)
       .sort((a, b) => b.misAJourLe.localeCompare(a.misAJourLe))
-      .slice(0, 5);
+      .slice(0, 3); // Modification : limiter l'aperçu pour conserver des widgets compacts.
   }, [notes.notes]);
 
   const handleWidgetOpen = (widgetId: WidgetId) => {

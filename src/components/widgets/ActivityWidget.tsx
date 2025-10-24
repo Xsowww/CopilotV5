@@ -11,7 +11,7 @@ interface ActivityWidgetProps {
 }
 
 export const ActivityWidget = ({ activities, loading, onOpen, disabled = false }: ActivityWidgetProps) => {
-  const highlights = activities.slice(0, 5);
+  const highlights = activities.slice(0, 3); // Modification : réduire le flux pour garder le widget léger.
 
   return (
     <WidgetCard
@@ -27,12 +27,12 @@ export const ActivityWidget = ({ activities, loading, onOpen, disabled = false }
       ) : highlights.length === 0 ? (
         <p className="widget-card__empty">Aucune activité récente.</p>
       ) : (
-        <ul className="activity-widget">
+        <ul className="widget-list">
           {highlights.map((activity) => (
             <li key={activity.id}>
-              <div>
-                <p className="activity-widget__title">{activity.titre}</p>
-                <span className="activity-widget__meta">
+              <div className="widget-list__main">
+                <p className="widget-list__title">{activity.titre}</p>
+                <span className="widget-list__meta">
                   {activity.type === "drive"
                     ? "Drive"
                     : activity.type === "organisation"
@@ -42,9 +42,7 @@ export const ActivityWidget = ({ activities, loading, onOpen, disabled = false }
                   {activity.utilisateur}
                 </span>
               </div>
-              <span className="activity-widget__time">
-                {formatRelativeDate(activity.date)}
-              </span>
+              <span className="widget-list__aside">{formatRelativeDate(activity.date)}</span>
             </li>
           ))}
         </ul>

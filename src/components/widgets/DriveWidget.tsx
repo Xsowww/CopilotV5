@@ -12,7 +12,7 @@ interface DriveWidgetProps {
 }
 
 export const DriveWidget = ({ items, loading, onOpen, disabled = false }: DriveWidgetProps) => {
-  const latest = useMemo(() => items.slice(0, 4), [items]);
+  const latest = useMemo(() => items.slice(0, 3), [items]); // Modification : limiter l'aperçu pour un widget plus fin.
 
   return (
     <WidgetCard
@@ -28,16 +28,16 @@ export const DriveWidget = ({ items, loading, onOpen, disabled = false }: DriveW
       ) : latest.length === 0 ? (
         <p className="widget-card__empty">Aucune activité récente.</p>
       ) : (
-        <ul className="drive-widget">
+        <ul className="widget-list">
           {latest.map((item) => (
             <li key={item.id}>
-              <div>
-                <p className="drive-widget__name">{item.nom}</p>
-                <span className="drive-widget__meta">
+              <div className="widget-list__main">
+                <p className="widget-list__title">{item.nom}</p>
+                <span className="widget-list__meta">
                   {formatRelativeDate(item.misAJourLe)} · {item.type === "dossier" ? "Dossier" : item.extension.toUpperCase()}
                 </span>
               </div>
-              <span className="drive-widget__size">
+              <span className="widget-list__aside">
                 {item.type === "fichier" ? formatWeight(item.poidsMo) : item.partage ? "Partagé" : "Privé"}
               </span>
             </li>

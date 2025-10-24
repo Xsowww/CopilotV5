@@ -20,9 +20,70 @@ export const OrganisationWidget = ({
   onOpen,
   disabled = false,
 }: OrganisationWidgetProps) => {
-  const prochainsEvenements = evenements.slice(0, 2);
-  const prochainesTaches = taches.slice(0, 2);
-  const prochainsRappels = rappels.slice(0, 2);
+  // Modification : ne conserver que la première entrée de chaque catégorie pour proposer un résumé synthétique.
+  const prochainEvenement = evenements[0];
+  const prochaineTache = taches[0];
+  const prochainRappel = rappels[0];
+
+  const renderEvenement = () => {
+    if (!prochainEvenement) {
+      return <p className="widget-card__empty">Aucun événement programmé.</p>;
+    }
+    const date = formatCalendarDate(prochainEvenement.date);
+    return (
+      <div className="organisation-widget__highlight">
+        <div className="organisation-widget__badge">
+          <span>{date.jour}</span>
+          <span>{date.mois}</span>
+        </div>
+        <div className="organisation-widget__details">
+          <p className="organisation-widget__title">{prochainEvenement.titre}</p>
+          <span className="organisation-widget__meta">
+            {(date.heure ?? "Toute la journée")} · {prochainEvenement.localisation ?? "Lieu à confirmer"}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTache = () => {
+    if (!prochaineTache) {
+      return <p className="widget-card__empty">Aucune tâche en attente.</p>;
+    }
+    const echeance = formatCalendarDate(prochaineTache.echeance);
+    return (
+      <div className="organisation-widget__highlight">
+        <div className={`organisation-widget__pill organisation-widget__pill--${prochaineTache.priorite}`}>
+          {prochaineTache.priorite}
+        </div>
+        <div className="organisation-widget__details">
+          <p className="organisation-widget__title">{prochaineTache.titre}</p>
+          <span className="organisation-widget__meta">
+            Statut : {prochaineTache.statut.replace(/_/g, " ")} · Échéance {echeance.jour} {echeance.mois}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRappel = () => {
+    if (!prochainRappel) {
+      return <p className="widget-card__empty">Aucun rappel planifié.</p>;
+    }
+    const date = formatCalendarDate(prochainRappel.date);
+    return (
+      <div className="organisation-widget__highlight">
+        <div className="organisation-widget__badge">
+          <span>{date.jour}</span>
+          <span>{date.mois}</span>
+        </div>
+        <div className="organisation-widget__details">
+          <p className="organisation-widget__title">{prochainRappel.titre}</p>
+          <span className="organisation-widget__meta">{prochainRappel.description ?? "Pas de description"}</span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <WidgetCard
@@ -37,84 +98,19 @@ export const OrganisationWidget = ({
         <p className="widget-card__empty">Chargement…</p>
       ) : (
         <div className="organisation-widget">
-          <section>
-            <h3>Événements</h3>
-            {prochainsEvenements.length === 0 ? (
-              <p className="widget-card__empty">Aucun événement programmé.</p>
-            ) : (
-              <ul>
-                {prochainsEvenements.map((event) => {
-                  const date = formatCalendarDate(event.date);
-                  return (
-                    <li key={event.id}>
-                      <div className="organisation-widget__date">
-                        <span>{date.jour}</span>
-                        <span>{date.mois}</span>
-                      </div>
-                      <div>
-                        <p className="organisation-widget__title">{event.titre}</p>
-                        <span className="organisation-widget__meta">
-                          {date.heure} · {event.localisation ?? "Lieu à confirmer"}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+          <section className="organisation-widget__section">
+            <h3>Événement à venir</h3>
+            {renderEvenement()}
           </section>
 
-          <section>
-            <h3>Tâches</h3>
-            {prochainesTaches.length === 0 ? (
-              <p className="widget-card__empty">Aucune tâche en attente.</p>
-            ) : (
-              <ul>
-                {prochainesTaches.map((task) => {
-                  const echeance = formatCalendarDate(task.echeance);
-                  return (
-                    <li key={task.id}>
-                      <div className={`organisation-widget__pill organisation-widget__pill--${task.priorite}`}>
-                        {task.priorite}
-                      </div>
-                      <div>
-                        <p className="organisation-widget__title">{task.titre}</p>
-                        <span className="organisation-widget__meta">
-                          Statut : {task.statut.replace("_", " ")} · Échéance {echeance.jour} {echeance.mois}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+          <section className="organisation-widget__section">
+            <h3>Tâche prioritaire</h3>
+            {renderTache()}
           </section>
 
-          <section>
-            <h3>Rappels</h3>
-            {prochainsRappels.length === 0 ? (
-              <p className="widget-card__empty">Aucun rappel planifié.</p>
-            ) : (
-              <ul>
-                {prochainsRappels.map((reminder) => {
-                  const date = formatCalendarDate(reminder.date);
-                  return (
-                    <li key={reminder.id}>
-                      <div className="organisation-widget__date">
-                        <span>{date.jour}</span>
-                        <span>{date.mois}</span>
-                      </div>
-                      <div>
-                        <p className="organisation-widget__title">{reminder.titre}</p>
-                        <span className="organisation-widget__meta">
-                          {reminder.description ?? "Pas de description"}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
+          <section className="organisation-widget__section">
+            <h3>Rappel</h3>
+            {renderRappel()}
           </section>
         </div>
       )}
