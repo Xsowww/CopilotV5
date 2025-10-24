@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { PiNotePencilFill, PiPlusBold, PiTrashFill } from "react-icons/pi";
 import { useAppData } from "../../context/AppDataContext";
+import { ActionDialog } from "../../components/common/ActionDialog";
 import type { Note, NoteFolder } from "../../types";
 import { formatRelativeDate } from "../../utils/formatters";
 
@@ -18,10 +19,18 @@ const buildFolderTree = (folders: Record<string, NoteFolder>, parentId: string |
     ]);
 };
 
+type NotesDialogState =
+  | { open: false }
+  | { open: true; type: "create-folder"; parentId: string }
+  | { open: true; type: "rename-folder"; folderId: string }
+  | { open: true; type: "delete-note"; noteId: string };
+
 export const NotesPage = () => {
   const { notes, createNoteFolder, renameNoteFolder, createNote, updateNote, deleteNote, moveNote } = useAppData();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<NotesDialogState>({ open: false });
+  const [dialogValue, setDialogValue] = useState("");
 
   useEffect(() => {
     const firstFolder = Object.values(notes.folders).find((folder) => folder.parentId === "note-root");
@@ -29,6 +38,19 @@ export const NotesPage = () => {
       setSelectedFolderId(firstFolder.id);
     }
   }, [notes.folders, selectedFolderId]);
+
+  useEffect(() => {
+    if (!dialog.open) {
+      setDialogValue("");
+      return;
+    }
+    if (dialog.type === "rename-folder") {
+      setDialogValue(notes.folders[dialog.folderId]?.nom ?? "");
+    }
+    if (dialog.type === "create-folder") {
+      setDialogValue("");
+    }
+  }, [dialog, notes.folders]);
 
   const folderTree = useMemo(() => buildFolderTree(notes.folders, "note-root"), [notes.folders]);
 
@@ -49,21 +71,21 @@ export const NotesPage = () => {
 
   const currentNote: Note | null = selectedNoteId ? notes.notes[selectedNoteId] ?? null : null;
 
-  const handleCreateFolder = () => {
-    if (!selectedFolderId) return;
-    const nom = window.prompt("Nom du nouveau dossier");
-    if (nom) {
-      const newId = createNoteFolder(selectedFolderId, nom.trim());
-      setSelectedFolderId(newId);
-      setSelectedNoteId(null);
-    }
+  const closeDialog = () => {
+    setDialog({ open: false });
+    setDialogValue("");
   };
 
-  const handleRenameFolder = (folderId: string, currentName: string) => {
-    const nom = window.prompt("Renommer le dossier", currentName);
-    if (nom && nom.trim()) {
-      renameNoteFolder(folderId, nom.trim());
-    }
+  const isFolderDialog = dialog.open && (dialog.type === "create-folder" || dialog.type === "rename-folder");
+  const isDeleteNoteDialog = dialog.open && dialog.type === "delete-note";
+
+  const handleCreateFolder = () => {
+    if (!selectedFolderId) return;
+    setDialog({ open: true, type: "create-folder", parentId: selectedFolderId });
+  };
+
+  const handleRenameFolder = (folderId: string) => {
+    setDialog({ open: true, type: "rename-folder", folderId });
   };
 
   const handleCreateNote = () => {
@@ -74,10 +96,7 @@ export const NotesPage = () => {
 
   const handleDeleteNote = () => {
     if (!currentNote) return;
-    if (window.confirm("Supprimer cette note ?")) {
-      deleteNote(currentNote.id);
-      setSelectedNoteId(null);
-    }
+    setDialog({ open: true, type: "delete-note", noteId: currentNote.id });
   };
 
   return (
@@ -101,7 +120,7 @@ export const NotesPage = () => {
               onClick={() => {
                 setSelectedFolderId(folder.id);
               }}
-              onDoubleClick={() => handleRenameFolder(folder.id, folder.nom)}
+              onDoubleClick={() => handleRenameFolder(folder.id)}
             >
               <span>{folder.nom}</span>
               {folder.id !== "note-root" && <small>{Object.values(notes.notes).filter((note) => note.dossierId === folder.id).length}</small>}
@@ -178,6 +197,54 @@ export const NotesPage = () => {
           </div>
         )}
       </section>
+
+      {/* Mise à jour : modales internes pour dossiers et notes */}
+      <ActionDialog
+        open={isFolderDialog}
+        title={dialog.open && dialog.type === "rename-folder" ? "Renommer le dossier" : "Nouveau dossier"}
+        confirmLabel={dialog.open && dialog.type === "rename-folder" ? "Renommer" : "Créer"}
+        onClose={closeDialog}
+        onConfirm={() => {
+          if (!dialog.open) return;
+          const value = dialogValue.trim();
+          if (!value) return;
+          if (dialog.type === "create-folder") {
+            const newId = createNoteFolder(dialog.parentId, value);
+            setSelectedFolderId(newId);
+            setSelectedNoteId(null);
+          }
+          if (dialog.type === "rename-folder") {
+            renameNoteFolder(dialog.folderId, value);
+          }
+          closeDialog();
+        }}
+        confirmDisabled={!dialogValue.trim()}
+      >
+        <label className="dialog-field">
+          <span>Nom du dossier</span>
+          <input
+            value={dialogValue}
+            onChange={(event) => setDialogValue(event.target.value)}
+            placeholder="Donne un nom à ton dossier"
+          />
+        </label>
+      </ActionDialog>
+
+      <ActionDialog
+        open={isDeleteNoteDialog}
+        title="Supprimer la note"
+        description="La note sera retirée de la démonstration Copilot."
+        confirmLabel="Supprimer"
+        onClose={closeDialog}
+        onConfirm={() => {
+          if (!dialog.open || dialog.type !== "delete-note") return;
+          deleteNote(dialog.noteId);
+          if (selectedNoteId === dialog.noteId) {
+            setSelectedNoteId(null);
+          }
+          closeDialog();
+        }}
+      />
     </div>
   );
 };

@@ -43,12 +43,13 @@ const driveFolders: Record<string, DriveFolderNode> = {
     partage: false,
     misAJourLe: formatISO(subDays(now, 2)),
   },
+  // Mise à jour : ajustement de la hiérarchie pour intégrer les nouveaux aperçus
   "drive-projet": {
     id: "drive-projet",
     nom: "Projet Copilot",
     type: "dossier",
     parentId: "drive-root",
-    enfants: ["drive-doc-4"],
+    enfants: ["drive-doc-4", "drive-doc-2"],
     partage: true,
     misAJourLe: formatISO(subDays(now, 2)),
   },
@@ -73,6 +74,8 @@ const driveFiles: Record<string, DriveFileNode> = {
     poidsMo: 3.2,
     partage: true,
     misAJourLe: formatISO(subDays(now, 1)),
+    apercuType: "pdf",
+    apercuUrl: "/previews/presentation.pdf",
   },
   "drive-doc-2": {
     id: "drive-doc-2",
@@ -83,6 +86,8 @@ const driveFiles: Record<string, DriveFileNode> = {
     poidsMo: 2.4,
     partage: false,
     misAJourLe: formatISO(subDays(now, 4)),
+    apercuType: "pdf",
+    apercuUrl: "/previews/compte-rendu.pdf",
   },
   "drive-doc-3": {
     id: "drive-doc-3",
@@ -93,6 +98,9 @@ const driveFiles: Record<string, DriveFileNode> = {
     poidsMo: 1.1,
     partage: false,
     misAJourLe: formatISO(subDays(now, 1)),
+    apercuType: "document",
+    contenuTexte:
+      "Synthèse initiale importée. Utilise l'éditeur pour compléter ou modifier le contenu du document.",
   },
   "drive-doc-4": {
     id: "drive-doc-4",
@@ -103,6 +111,7 @@ const driveFiles: Record<string, DriveFileNode> = {
     poidsMo: 0.8,
     partage: true,
     misAJourLe: formatISO(subDays(now, 2)),
+    apercuType: "autre",
   },
 };
 

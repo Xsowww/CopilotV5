@@ -14,6 +14,7 @@ import {
 import { fr } from "date-fns/locale";
 import { PiCalendarBlankFill, PiCalendarCheckFill, PiCalendarFill, PiPlusBold } from "react-icons/pi";
 import { useAppData } from "../../context/AppDataContext";
+import { ActionDialog } from "../../components/common/ActionDialog";
 import type { Evenement, Rappel, Tache } from "../../types";
 
 const VIEWS = [
@@ -30,6 +31,8 @@ interface EditorState {
   type: EditorType;
   data: Partial<Evenement & Tache & Rappel> & { id?: string; date: string };
 }
+
+type DeletionState = { open: false } | { open: true; type: EditorType; id: string; titre: string };
 
 const toDate = (iso: string) => parseISO(iso);
 
@@ -48,6 +51,7 @@ export const OrganisationPage = () => {
   const [view, setView] = useState<ViewId>("semaine");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [editor, setEditor] = useState<EditorState | null>(null);
+  const [deletion, setDeletion] = useState<DeletionState>({ open: false });
 
   const events = useMemo(() => organisation.evenements.map((event) => ({ ...event, dateObj: toDate(event.date) })), [
     organisation.evenements,
@@ -110,21 +114,42 @@ export const OrganisationPage = () => {
   };
 
   const handleDelete = (type: EditorType, id: string) => {
-    if (!window.confirm("Supprimer cet élément ?")) return;
-    switch (type) {
+    let titre = "";
+    if (type === "evenement") {
+      titre = organisation.evenements.find((item) => item.id === id)?.titre ?? "Événement";
+    }
+    if (type === "tache") {
+      titre = organisation.taches.find((item) => item.id === id)?.titre ?? "Tâche";
+    }
+    if (type === "rappel") {
+      titre = organisation.rappels.find((item) => item.id === id)?.titre ?? "Rappel";
+    }
+    setDeletion({ open: true, type, id, titre });
+  };
+
+  const confirmDeletion = () => {
+    if (!deletion.open) return;
+    switch (deletion.type) {
       case "evenement":
-        deleteEvenement(id);
+        deleteEvenement(deletion.id);
         break;
       case "tache":
-        deleteTache(id);
+        deleteTache(deletion.id);
         break;
       case "rappel":
-        deleteRappel(id);
+        deleteRappel(deletion.id);
         break;
       default:
         break;
     }
+    if (editor?.data.id === deletion.id) {
+      setEditor(null);
+    }
+    setDeletion({ open: false });
   };
+
+  const closeDeletion = () => setDeletion({ open: false });
+  const deletionLabel = deletion.open ? deletion.titre : "cet élément";
 
   const saveEditor = (state: EditorState) => {
     const baseId = state.data.id ?? crypto.randomUUID();
@@ -552,6 +577,16 @@ export const OrganisationPage = () => {
           </div>
         </div>
       )}
+
+      {/* Mise à jour : confirmation harmonisée des suppressions */}
+      <ActionDialog
+        open={deletion.open}
+        title="Confirmer la suppression"
+        description={`"${deletionLabel}" sera retiré de ton organisation.`}
+        confirmLabel="Supprimer"
+        onClose={closeDeletion}
+        onConfirm={confirmDeletion}
+      />
     </div>
   );
 };

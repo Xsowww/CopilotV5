@@ -11,11 +11,16 @@ export interface BaseDriveNode {
   misAJourLe: string;
 }
 
+export type DrivePreviewType = "image" | "pdf" | "document" | "texte" | "autre";
+
 export interface DriveFileNode extends BaseDriveNode {
   type: "fichier";
   extension: string;
   poidsMo: number;
   partage: boolean;
+  apercuType: DrivePreviewType;
+  apercuUrl?: string;
+  contenuTexte?: string;
 }
 
 export interface DriveFolderNode extends BaseDriveNode {

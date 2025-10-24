@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   PiArrowArcLeftBold,
   PiCloudArrowUpFill,
@@ -6,6 +6,8 @@ import {
   PiFolderPlusFill,
 } from "react-icons/pi";
 import { useAppData } from "../../context/AppDataContext";
+import { ActionDialog } from "../../components/common/ActionDialog";
+import { DrivePreview } from "../../components/drive/DrivePreview";
 import type { DriveFileNode, DriveFolderNode, DriveNode } from "../../types";
 import { formatRelativeDate, formatWeight } from "../../utils/formatters";
 
@@ -26,6 +28,14 @@ const initialMenuState: ContextMenuState = {
 const isFolder = (node: DriveNode | undefined): node is DriveFolderNode =>
   Boolean(node && node.type === "dossier");
 
+type DriveDialogState =
+  | { open: false }
+  | { open: true; type: "create"; parentId: string }
+  | { open: true; type: "import"; parentId: string }
+  | { open: true; type: "rename"; nodeId: string }
+  | { open: true; type: "delete"; nodeId: string }
+  | { open: true; type: "move"; nodeId: string };
+
 export const DrivePage = () => {
   const {
     drive,
@@ -37,12 +47,17 @@ export const DrivePage = () => {
     copyDriveNode,
     cutDriveNode,
     pasteClipboard,
+    updateDriveFile,
     clipboard,
   } = useAppData();
 
   const [currentFolderId, setCurrentFolderId] = useState(drive.rootId);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(initialMenuState);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [dialog, setDialog] = useState<DriveDialogState>({ open: false });
+  const [dialogValue, setDialogValue] = useState("");
+  const [moveTarget, setMoveTarget] = useState<string>("");
+  const [previewId, setPreviewId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleClick = () => setContextMenu(initialMenuState);
@@ -90,58 +105,90 @@ export const DrivePage = () => {
     });
   }, [currentFolder, drive.nodes]);
 
-  const handleOpenFolder = (node: DriveNode) => {
-    if (node.type === "dossier") {
-      setCurrentFolderId(node.id);
-    }
-  };
-
-  const handleCreateFolder = () => {
-    const nom = window.prompt("Nom du nouveau dossier");
-    if (nom) {
-      createDriveFolder(currentFolderId, nom.trim());
-    }
-  };
-
-  const handleRename = (nodeId: string) => {
-    const node = drive.nodes[nodeId];
-    if (!node) return;
-    const nom = window.prompt("Renommer l'élément", node.nom);
-    if (nom && nom.trim()) {
-      renameDriveNode(nodeId, nom.trim());
-    }
-    setContextMenu(initialMenuState);
-  };
-
-  const handleDelete = (nodeId: string) => {
-    const node = drive.nodes[nodeId];
-    if (!node) return;
-    if (window.confirm(`Supprimer "${node.nom}" ?`)) {
-      deleteDriveNode(nodeId);
-    }
-    setContextMenu(initialMenuState);
-  };
-
   const allFolders = useMemo(() => {
     return Object.values(drive.nodes).filter((node): node is DriveFolderNode => node.type === "dossier");
   }, [drive.nodes]);
 
-  const handleMove = (nodeId: string) => {
-    const destinations = allFolders.filter((folder) => folder.id !== nodeId);
-    const selection = window.prompt(
-      `Déplacer dans quel dossier ?\n${destinations
-        .map((folder) => `- ${folder.nom}`)
-        .join("\n")}`,
-      currentFolder.nom
-    );
-    if (!selection) return;
-    const target = destinations.find((folder) => folder.nom.toLowerCase() === selection.toLowerCase());
-    if (target) {
-      moveDriveNode(nodeId, target.id);
-    } else {
-      window.alert("Dossier introuvable. Merci de saisir le nom exact.");
-    }
+  const getDescendantIds = useCallback(
+    (folderId: string) => {
+      const ids = new Set<string>();
+      const visit = (id: string) => {
+        const node = drive.nodes[id];
+        if (!node || node.type !== "dossier") return;
+        node.enfants.forEach((childId) => {
+          ids.add(childId);
+          visit(childId);
+        });
+      };
+      visit(folderId);
+      return ids;
+    },
+    [drive.nodes]
+  );
+
+  const showDialog = (state: DriveDialogState) => {
+    setDialog(state);
     setContextMenu(initialMenuState);
+  };
+
+  const closeDialog = () => {
+    setDialog({ open: false });
+    setDialogValue("");
+    setMoveTarget("");
+  };
+
+  useEffect(() => {
+    if (!dialog.open) {
+      setDialogValue("");
+      return;
+    }
+    if (dialog.type === "rename") {
+      const node = drive.nodes[dialog.nodeId];
+      setDialogValue(node?.nom ?? "");
+    }
+    if (dialog.type === "create" || dialog.type === "import") {
+      setDialogValue("");
+    }
+    if (dialog.type === "move") {
+      const node = drive.nodes[dialog.nodeId];
+      const candidate = node?.parentId ?? currentFolderId;
+      const forbidden = getDescendantIds(dialog.nodeId);
+      forbidden.add(dialog.nodeId);
+      const allowedTargets = allFolders.map((folder) => folder.id).filter((id) => !forbidden.has(id));
+      if (candidate && allowedTargets.includes(candidate)) {
+        setMoveTarget(candidate);
+      } else {
+        setMoveTarget(allowedTargets[0] ?? "");
+      }
+    }
+  }, [dialog, currentFolderId, allFolders, getDescendantIds, drive.nodes]);
+
+  const handleOpenNode = (node: DriveNode) => {
+    if (node.type === "dossier") {
+      setCurrentFolderId(node.id);
+    } else {
+      setPreviewId(node.id);
+    }
+  };
+
+  const handleCreateFolder = () => {
+    showDialog({ open: true, type: "create", parentId: currentFolderId });
+  };
+
+  const handleImportFolder = () => {
+    showDialog({ open: true, type: "import", parentId: currentFolderId });
+  };
+
+  const handleRename = (nodeId: string) => {
+    showDialog({ open: true, type: "rename", nodeId });
+  };
+
+  const handleDelete = (nodeId: string) => {
+    showDialog({ open: true, type: "delete", nodeId });
+  };
+
+  const handleMove = (nodeId: string) => {
+    showDialog({ open: true, type: "move", nodeId });
   };
 
   const handleCopy = (nodeId: string) => {
@@ -177,6 +224,21 @@ export const DrivePage = () => {
       fileInputRef.current.value = "";
     }
   };
+
+  const previewFile = useMemo(() => {
+    if (!previewId) return null;
+    const node = drive.nodes[previewId];
+    return node && node.type === "fichier" ? (node as DriveFileNode) : null;
+  }, [drive.nodes, previewId]);
+
+  const moveForbiddenTargets = useMemo(() => {
+    if (!(dialog.open && dialog.type === "move")) {
+      return new Set<string>();
+    }
+    const ids = getDescendantIds(dialog.nodeId);
+    ids.add(dialog.nodeId);
+    return ids;
+  }, [dialog, getDescendantIds]);
 
   return (
     <div className="drive-page" onContextMenu={(event) => openContextMenu(event, null)}>
@@ -216,12 +278,7 @@ export const DrivePage = () => {
           <button
             type="button"
             className="btn-secondary"
-            onClick={() => {
-              const nom = window.prompt("Nom du dossier à importer");
-              if (nom) {
-                createDriveFolder(currentFolderId, nom.trim());
-              }
-            }}
+            onClick={handleImportFolder}
           >
             <PiDotsThreeOutlineFill size={16} /> Importer dossier
           </button>
@@ -257,9 +314,9 @@ export const DrivePage = () => {
                 type="button"
                 className="drive-table__row"
                 role="row"
-                onDoubleClick={() => handleOpenFolder(item)}
+                onDoubleClick={() => handleOpenNode(item)}
                 onContextMenu={(event) => openContextMenu(event, item.id)}
-                onClick={() => item.type === "dossier" && handleOpenFolder(item)}
+                onClick={() => item.type === "dossier" && handleOpenNode(item)}
               >
                 <span>{item.nom}</span>
                 <span>{item.type === "dossier" ? "Dossier" : item.extension.toUpperCase()}</span>
@@ -285,6 +342,20 @@ export const DrivePage = () => {
         >
           {contextMenu.targetId && (
             <>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const node = contextMenu.targetId ? drive.nodes[contextMenu.targetId] : null;
+                    if (node) {
+                      handleOpenNode(node);
+                    }
+                    setContextMenu(initialMenuState);
+                  }}
+                >
+                  Ouvrir
+                </button>
+              </li>
               <li>
                 <button type="button" onClick={() => handleRename(contextMenu.targetId!)}>
                   Renommer
@@ -335,6 +406,105 @@ export const DrivePage = () => {
           )}
         </ul>
       )}
+
+      {/* Mise à jour : flux de gestion des dossiers via une modale cohérente */}
+      <ActionDialog
+        open={
+          dialog.open &&
+          (dialog.type === "create" || dialog.type === "import" || dialog.type === "rename")
+        }
+        title={
+          dialog.open && dialog.type === "rename"
+            ? "Renommer l'élément"
+            : dialog.open && dialog.type === "import"
+              ? "Importer un dossier"
+              : "Nouveau dossier"
+        }
+        confirmLabel={
+          dialog.open && dialog.type === "rename"
+            ? "Renommer"
+            : dialog.open && dialog.type === "import"
+              ? "Importer"
+              : "Créer"
+        }
+        onClose={closeDialog}
+        onConfirm={() => {
+          if (!dialog.open) return;
+          const value = dialogValue.trim();
+          if (!value) return;
+          if (dialog.type === "create" || dialog.type === "import") {
+            createDriveFolder(dialog.parentId, value);
+          }
+          if (dialog.type === "rename") {
+            renameDriveNode(dialog.nodeId, value);
+          }
+          closeDialog();
+        }}
+        confirmDisabled={!dialogValue.trim()}
+      >
+        <label className="dialog-field">
+          <span>Nom</span>
+          <input
+            value={dialogValue}
+            onChange={(event) => setDialogValue(event.target.value)}
+            placeholder="Nom du dossier"
+          />
+        </label>
+      </ActionDialog>
+
+      {/* Mise à jour : confirmation interne pour les suppressions */}
+      <ActionDialog
+        open={dialog.open && dialog.type === "delete"}
+        title="Supprimer l'élément"
+        description="Confirme la suppression. Cette action est immédiate dans la démonstration."
+        confirmLabel="Supprimer"
+        onClose={closeDialog}
+        onConfirm={() => {
+          if (!dialog.open || dialog.type !== "delete") return;
+          deleteDriveNode(dialog.nodeId);
+          closeDialog();
+        }}
+      />
+
+      {/* Mise à jour : déplacement avec sélection guidée */}
+      <ActionDialog
+        open={dialog.open && dialog.type === "move"}
+        title="Déplacer dans un dossier"
+        confirmLabel="Déplacer"
+        onClose={closeDialog}
+        onConfirm={() => {
+          if (!dialog.open || dialog.type !== "move" || !moveTarget) return;
+          moveDriveNode(dialog.nodeId, moveTarget);
+          closeDialog();
+        }}
+        confirmDisabled={
+          !(dialog.open && dialog.type === "move") || !moveTarget || moveForbiddenTargets.has(moveTarget)
+        }
+      >
+        {dialog.open && dialog.type === "move" ? (
+          <label className="dialog-field">
+            <span>Destination</span>
+            <select value={moveTarget} onChange={(event) => setMoveTarget(event.target.value)}>
+              {allFolders
+                .filter((folder) => {
+                  if (!dialog.open || dialog.type !== "move") return true;
+                  return !moveForbiddenTargets.has(folder.id);
+                })
+                .map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.nom}
+                  </option>
+                ))}
+            </select>
+          </label>
+        ) : null}
+      </ActionDialog>
+
+      <DrivePreview
+        file={previewFile}
+        onClose={() => setPreviewId(null)}
+        onSaveDocument={(nodeId, content) => updateDriveFile(nodeId, { contenuTexte: content })}
+      />
     </div>
   );
 };

@@ -67,6 +67,7 @@ interface AppDataContextValue {
   copyDriveNode: (nodeId: string) => void;
   cutDriveNode: (nodeId: string) => void;
   pasteClipboard: (targetFolderId: string) => void;
+  updateDriveFile: (nodeId: string, updates: Partial<DriveFileNode>) => void;
   clearClipboard: () => void;
   createNoteFolder: (parentId: string, nom: string) => string;
   renameNoteFolder: (folderId: string, nom: string) => void;
@@ -109,6 +110,26 @@ const STORAGE_KEYS = {
 };
 
 const isBrowser = typeof window !== "undefined";
+
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
+const TEXT_EXTENSIONS = new Set(["txt", "md", "json", "csv"]);
+const DOCUMENT_EXTENSIONS = new Set(["doc", "docx", "rtf"]);
+
+const readFileAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+
+const readFileAsText = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
 
 const readStorage = <T,>(key: string, fallback: T): T => {
   if (!isBrowser) return fallback;
@@ -271,42 +292,87 @@ export const AppDataProvider = ({ children }: PropsWithChildren) => {
   const uploadDriveFiles = useCallback(
     (parentId: string, files: File[]) => {
       if (!files.length) return;
-      setDrive((prev) => {
-        const parent = prev.nodes[parentId];
-        if (!parent || parent.type !== "dossier") return prev;
-        const nowIso = new Date().toISOString();
-        const nodes = { ...prev.nodes };
-        const enfants = [...parent.enfants];
-        files.forEach((file) => {
-          const id = crypto.randomUUID();
-          const extension = file.name.split(".").pop() ?? "fichier";
-          const node: DriveFileNode = {
-            id,
-            nom: file.name,
-            type: "fichier",
-            parentId,
-            extension,
-            poidsMo: Math.max(file.size / (1024 * 1024), 0.01),
-            partage: false,
+
+      const processFiles = async () => {
+        const prepared = await Promise.all(
+          files.map(async (file) => {
+            const id = crypto.randomUUID();
+            const extension = (file.name.split(".").pop() ?? "fichier").toLowerCase();
+            let apercuType: DriveFileNode["apercuType"] = "autre";
+            let apercuUrl: string | undefined;
+            let contenuTexte: string | undefined;
+
+            // Mise à jour : génération des aperçus locaux pour l'expérience immersive du drive
+            if (isBrowser) {
+              try {
+                if (IMAGE_EXTENSIONS.has(extension)) {
+                  apercuType = "image";
+                  apercuUrl = await readFileAsDataUrl(file);
+                } else if (extension === "pdf") {
+                  apercuType = "pdf";
+                  apercuUrl = await readFileAsDataUrl(file);
+                } else if (DOCUMENT_EXTENSIONS.has(extension)) {
+                  apercuType = "document";
+                  contenuTexte = await readFileAsText(file);
+                } else if (TEXT_EXTENSIONS.has(extension)) {
+                  apercuType = "texte";
+                  contenuTexte = await readFileAsText(file);
+                }
+              } catch (error) {
+                console.warn("Prévisualisation indisponible pour", file.name, error);
+              }
+            }
+
+            if (!contenuTexte && DOCUMENT_EXTENSIONS.has(extension)) {
+              contenuTexte = `Document importé depuis ${file.name}. Ajuste le texte pour partager ta version.`;
+            }
+
+            const node: DriveFileNode = {
+              id,
+              nom: file.name,
+              type: "fichier",
+              parentId,
+              extension,
+              poidsMo: Math.max(file.size / (1024 * 1024), 0.01),
+              partage: false,
+              misAJourLe: new Date().toISOString(),
+              apercuType,
+              apercuUrl,
+              contenuTexte,
+            };
+
+            return node;
+          })
+        );
+
+        setDrive((prev) => {
+          const parent = prev.nodes[parentId];
+          if (!parent || parent.type !== "dossier") return prev;
+          const nodes = { ...prev.nodes };
+          const enfants = [...parent.enfants];
+          prepared.forEach((node) => {
+            nodes[node.id] = node;
+            enfants.push(node.id);
+          });
+          const nowIso = new Date().toISOString();
+          nodes[parentId] = {
+            ...(parent as DriveFolderNode),
+            enfants,
             misAJourLe: nowIso,
           };
-          nodes[id] = node;
-          enfants.push(id);
+          const updatedNodes = updateParentTimestamp(nodes, parent.parentId);
+          return { ...prev, nodes: updatedNodes };
         });
-        nodes[parentId] = {
-          ...(parent as DriveFolderNode),
-          enfants,
-          misAJourLe: nowIso,
-        };
-        const updatedNodes = updateParentTimestamp(nodes, parent.parentId);
-        return { ...prev, nodes: updatedNodes };
-      });
-      addActivity({
-        type: "drive",
-        titre: "Fichiers importés",
-        description: `${files.length} élément(s) ajouté(s) dans le drive`,
-        utilisateur: profile.nom,
-      });
+
+        addActivity({
+          type: "drive",
+          titre: "Fichiers importés",
+          description: `${prepared.length} élément(s) ajouté(s) dans le drive`,
+          utilisateur: profile.nom,
+        });
+      };
+
+      void processFiles();
     },
     [addActivity, profile.nom, updateParentTimestamp]
   );
@@ -365,6 +431,32 @@ export const AppDataProvider = ({ children }: PropsWithChildren) => {
       utilisateur: profile.nom,
     });
   }, [addActivity, profile.nom]);
+
+  const updateDriveFile = useCallback(
+    (nodeId: string, updates: Partial<DriveFileNode>) => {
+      let previousName = "Fichier";
+      setDrive((prev) => {
+        const node = prev.nodes[nodeId];
+        if (!node || node.type !== "fichier") return prev;
+        previousName = node.nom;
+        const updatedNode: DriveFileNode = {
+          ...node,
+          ...updates,
+          misAJourLe: new Date().toISOString(),
+        };
+        const nodes = { ...prev.nodes, [nodeId]: updatedNode };
+        const updatedNodes = updateParentTimestamp(nodes, node.parentId);
+        return { ...prev, nodes: updatedNodes };
+      });
+      addActivity({
+        type: "drive",
+        titre: "Fichier mis à jour",
+        description: `Le contenu de "${previousName}" a été actualisé`,
+        utilisateur: profile.nom,
+      });
+    },
+    [addActivity, profile.nom, updateParentTimestamp]
+  );
 
   const moveDriveNode = useCallback((nodeId: string, targetFolderId: string) => {
     setDrive((prev) => {
@@ -681,6 +773,7 @@ export const AppDataProvider = ({ children }: PropsWithChildren) => {
       copyDriveNode,
       cutDriveNode,
       pasteClipboard,
+      updateDriveFile,
       clearClipboard,
       createNoteFolder,
       renameNoteFolder,
@@ -723,6 +816,7 @@ export const AppDataProvider = ({ children }: PropsWithChildren) => {
       pasteClipboard,
       profile,
       renameDriveNode,
+      updateDriveFile,
       renameNoteFolder,
       saveEvenement,
       saveRappel,
