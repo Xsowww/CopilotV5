@@ -241,6 +241,17 @@ label {
   color: var(--text-secondary);
 }
 
+/* Synchronisation Supabase : indicateur visuel discret dans la topbar. */
+.topbar__sync {
+  font-size: 0.8rem;
+  color: var(--accent-strong);
+  background: rgba(90, 162, 255, 0.12);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  margin-left: 0.4rem;
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.35));
+}
+
 .topbar__action {
   width: 42px;
   height: 42px;
@@ -419,6 +430,21 @@ label {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+.profile-menu__signout {
+  align-self: flex-start;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 0;
+  margin-top: -4px;
+  transition: color 0.2s ease;
+}
+
+.profile-menu__signout:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
 }
 
 .btn-primary,
@@ -1641,6 +1667,133 @@ label {
 .dialog-card,
 .drive-preview {
   backdrop-filter: saturate(140%);
+}
+
+/* Authentification Supabase : écran de connexion/inscription dédié. */
+.app__loading {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: inherit;
+}
+
+.app__loading p {
+  color: var(--text-secondary);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.auth {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(2.5rem, 6vw, 4.5rem);
+  background: inherit;
+}
+
+.auth__card {
+  width: min(420px, 92vw);
+  background: linear-gradient(155deg, rgba(22, 52, 124, 0.88), rgba(10, 30, 82, 0.9));
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-strong);
+  padding: clamp(2rem, 4vw, 2.8rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  backdrop-filter: blur(var(--glass-blur));
+}
+
+.auth__header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  color: var(--text-primary);
+}
+
+.auth__subtitle {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--text-tertiary);
+}
+
+.auth__card h1 {
+  font-size: clamp(1.5rem, 3vw, 1.9rem);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.auth__warning {
+  background: rgba(255, 107, 129, 0.12);
+  color: var(--warning);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  border: 1px solid rgba(255, 107, 129, 0.35);
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.auth__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.auth__field input {
+  width: 100%;
+  background: rgba(7, 21, 54, 0.88);
+}
+
+.auth__feedback {
+  font-size: 0.85rem;
+  color: var(--warning);
+}
+
+.auth__submit {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(120deg, rgba(90, 162, 255, 0.85), rgba(123, 189, 255, 0.95));
+  color: #051035;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth__submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px -12px rgba(90, 162, 255, 0.75);
+}
+
+.auth__submit:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.auth__footer {
+  display: flex;
+  justify-content: center;
+}
+
+.auth__switch {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  text-decoration: underline;
+}
+
+.auth__switch:hover {
+  color: var(--accent-strong);
 }
 
 @media (max-width: 1280px) {

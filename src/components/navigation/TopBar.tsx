@@ -4,6 +4,7 @@ import { fr } from "date-fns/locale";
 import { PiBellSimpleFill, PiCloudFill } from "react-icons/pi";
 import { useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
+import { useAuth } from "../../context/AuthContext";
 
 interface ProfileFormState {
   nom: string;
@@ -15,7 +16,8 @@ interface ProfileFormState {
 
 export const TopBar = () => {
   const date = format(new Date(), "EEEE d MMMM yyyy", { locale: fr });
-  const { profile, updateProfile, organisation } = useAppData();
+  const { profile, updateProfile, organisation, isSyncing } = useAppData();
+  const { signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [form, setForm] = useState<ProfileFormState>({
@@ -28,6 +30,7 @@ export const TopBar = () => {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
+  const avatarSrc = profile.avatarUrl?.trim() ? profile.avatarUrl : "/vite.svg";
 
   const notifications = useMemo(() => {
     const items = [
@@ -122,6 +125,7 @@ export const TopBar = () => {
       </div>
       <div className="topbar__right">
         <span className="topbar__date">{date}</span>
+        {isSyncing && <span className="topbar__sync">Synchronisation…</span>}
         <div className="topbar__notifications" ref={notificationsRef}>
           <button
             type="button"
@@ -190,7 +194,7 @@ export const TopBar = () => {
             aria-haspopup="dialog"
             aria-expanded={isMenuOpen}
           >
-            <img src={profile.avatarUrl} alt={`Avatar de ${profile.nom}`} />
+            <img src={avatarSrc} alt={`Avatar de ${profile.nom}`} />
             <span className="topbar__status" aria-hidden="true" />
           </button>
           {isMenuOpen && (
@@ -247,6 +251,16 @@ export const TopBar = () => {
                   </button>
                 </div>
               </form>
+              <button
+                type="button"
+                className="profile-menu__signout"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  void signOut();
+                }}
+              >
+                Se déconnecter
+              </button>
             </div>
           )}
         </div>

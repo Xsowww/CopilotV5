@@ -21,13 +21,16 @@ src/
 │       ├── DriveWidget.tsx
 │       ├── NotesWidget.tsx
 │       └── OrganisationWidget.tsx
-├── data/
-│   └── mockData.ts
+├── context/
+│   ├── AppDataContext.tsx
+│   └── AuthContext.tsx
 ├── hooks/
 │   └── useAutoRefresh.ts
 ├── layouts/
 │   └── DashboardLayout.tsx
 ├── pages/
+│   ├── Auth/
+│   │   └── AuthPage.tsx
 │   ├── Dashboard/
 │   │   └── DashboardPage.tsx
 │   ├── Drive/
@@ -48,7 +51,7 @@ src/
 └── main.tsx
 ```
 
-Chaque espace fonctionne de manière indépendante, avec ses composants dédiés et des endpoints mock simulés via `mockApi`. L'intégration à Supabase est préparée dans `supabaseClient.ts` : il suffit de définir les variables d'environnement `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` pour basculer vers une base temps réel.
+Chaque espace fonctionne de manière indépendante, avec des composants dédiés. Toutes les données métiers (drive, notes, organisation, profil, mise en page, messages du chatbot) sont sérialisées par utilisateur et stockées dans Supabase via `AppDataContext`. Le service `mockApi` ne sert plus qu'à alimenter les réponses factices du chatbot tant qu'une intégration Perplexity n'est pas branchée.
 
 ## Fonctionnalités
 
@@ -57,6 +60,8 @@ Chaque espace fonctionne de manière indépendante, avec ses composants dédiés
 - **Organisation** : vision consolidée du calendrier, des tâches (priorités, statuts) et des rappels.
 - **Notes** : navigation par dossiers et lecture riche des notes.
 - **Chatbot Copilot** : cadran fixe inspiré des assistants iCloud, connecté à l'API mock pour simuler les commandes vocales/textuelles.
+- **Authentification** : écran d'inscription/connexion e-mail + mot de passe (Supabase Auth) avec redirection automatique vers le tableau de bord une fois connecté.
+- **Persistance Supabase** : chaque modification est synchronisée en temps réel dans la table `app_state` pour l'utilisateur connecté.
 
 ## Lancer le projet
 
@@ -66,6 +71,51 @@ npm run dev
 ```
 
 L'application est disponible sur [http://localhost:5173](http://localhost:5173) et l'interface est entièrement en français.
+
+## Configuration Supabase
+
+1. **Créer un projet Supabase** et récupérer l'URL ainsi que la clé anonyme (onglet _Settings → API_).
+2. **Définir les variables d'environnement** dans un fichier `.env` en se basant sur `.env.example` :
+
+   ```bash
+   VITE_SUPABASE_URL="https://<votre-instance>.supabase.co"
+   VITE_SUPABASE_ANON_KEY="<clé-anon>"
+   VITE_SUPABASE_STORAGE_BUCKET="drive-previews" # optionnel mais conseillé
+   ```
+
+3. **Créer la table de persistance** en exécutant le SQL ci-dessous dans l'onglet _SQL Editor_ :
+
+   ```sql
+   create table if not exists app_state (
+     user_id uuid primary key references auth.users on delete cascade,
+     drive jsonb default '{}'::jsonb,
+     notes jsonb default '{}'::jsonb,
+     organisation jsonb default '{}'::jsonb,
+     activities jsonb default '[]'::jsonb,
+     widget_layout jsonb default '{}'::jsonb,
+     profile jsonb default '{}'::jsonb,
+     chat jsonb default '[]'::jsonb,
+     updated_at timestamptz default now()
+   );
+
+   alter table app_state enable row level security;
+
+   create policy "Utilisation lecture" on app_state
+     for select using (auth.uid() = user_id);
+
+   create policy "Utilisation écriture" on app_state
+     for upsert using (auth.uid() = user_id);
+   ```
+
+4. **(Optionnel) Créer un bucket de stockage** si vous souhaitez externaliser les fichiers importés :
+
+   ```sql
+   select storage.create_bucket('drive-previews', true, 'public');
+   ```
+
+   Ensuite, indiquez le nom du bucket dans `VITE_SUPABASE_STORAGE_BUCKET`. À défaut, les fichiers sont sérialisés en base64 dans `app_state` pour conserver la prévisualisation.
+
+5. **Redémarrer le serveur de développement** (`npm run dev`). À la première connexion, une entrée vide est créée automatiquement dans `app_state` et les espaces Drive/Notes/Organisation apparaissent vides, prêts à être alimentés par l'utilisateur.
 
 ## Tests et qualité
 

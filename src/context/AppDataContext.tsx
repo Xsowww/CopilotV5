@@ -8,16 +8,8 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import {
-  activities as activitiesSeed,
-  defaultProfile,
-  driveInitialState,
-  evenements as evenementsSeed,
-  initialMessages,
-  noteInitialState,
-  rappels as rappelsSeed,
-  taches as tachesSeed,
-} from "../data/mockData";
+import type { User } from "@supabase/supabase-js";
+import { getSupabaseClient } from "../services/supabaseClient";
 import type {
   ChatMessage,
   ClipboardState,
@@ -39,6 +31,57 @@ interface DriveState {
   nodes: Record<string, DriveNode>;
 }
 
+const DRIVE_ROOT_ID = "drive-racine";
+const NOTES_ROOT_ID = "notes-racine";
+
+const createDefaultDriveState = (): DriveState => ({
+  rootId: DRIVE_ROOT_ID,
+  nodes: {
+    [DRIVE_ROOT_ID]: {
+      id: DRIVE_ROOT_ID,
+      nom: "Mon Drive",
+      type: "dossier",
+      parentId: null,
+      enfants: [],
+      partage: false,
+      misAJourLe: new Date().toISOString(),
+    },
+  },
+});
+
+const createDefaultNotesState = (): NotesState => ({
+  folders: {
+    [NOTES_ROOT_ID]: {
+      id: NOTES_ROOT_ID,
+      nom: "Notes",
+      parentId: null,
+      enfants: [],
+    },
+  },
+  notes: {},
+});
+
+const createDefaultOrganisationState = (): OrganisationState => ({
+  evenements: [],
+  taches: [],
+  rappels: [],
+});
+
+const defaultMessages: ChatMessage[] = [];
+
+const createDefaultProfile = (user: User): UserProfile => ({
+  id: user.id,
+  nom:
+    (typeof user.user_metadata?.full_name === "string" && user.user_metadata.full_name.length > 0
+      ? (user.user_metadata.full_name as string)
+      : undefined) ?? user.email?.split("@")[0] ?? "Profil",
+  email: user.email ?? "",
+  avatarUrl:
+    (typeof user.user_metadata?.avatar_url === "string"
+      ? (user.user_metadata.avatar_url as string)
+      : ""),
+});
+
 interface NotesState {
   folders: Record<string, NoteFolder>;
   notes: Record<string, Note>;
@@ -59,6 +102,9 @@ interface AppDataContextValue {
   clipboard: ClipboardState;
   chatMessages: ChatMessage[];
   profile: UserProfile;
+  isHydrated: boolean;
+  isSyncing: boolean;
+  refreshFromSupabase: () => Promise<void>;
   createDriveFolder: (parentId: string, nom: string) => void;
   uploadDriveFiles: (parentId: string, files: File[]) => void;
   renameDriveNode: (nodeId: string, nom: string) => void;
@@ -107,6 +153,7 @@ const STORAGE_KEYS = {
   layout: "copilot-widget-layout",
   profile: "copilot-profile",
   chat: "copilot-chat",
+  activities: "copilot-activities",
 };
 
 const isBrowser = typeof window !== "undefined";
@@ -136,7 +183,11 @@ const readStorage = <T,>(key: string, fallback: T): T => {
   const raw = window.localStorage.getItem(key);
   if (!raw) return fallback;
   try {
-    return { ...fallback, ...JSON.parse(raw) };
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(fallback)) {
+      return (Array.isArray(parsed) ? parsed : fallback) as T;
+    }
+    return { ...fallback, ...parsed };
   } catch (error) {
     console.warn("Impossible de lire le stockage local", error);
     return fallback;
@@ -185,46 +236,178 @@ const cloneDriveSubtree = (nodes: Record<string, DriveNode>, nodeId: string, par
   return { nodes: clonedNodes, rootId: newId };
 };
 
-export const AppDataProvider = ({ children }: PropsWithChildren) => {
-  const [drive, setDrive] = useState<DriveState>(() => readStorage(STORAGE_KEYS.drive, driveInitialState));
-  const [notes, setNotes] = useState<NotesState>(() => readStorage(STORAGE_KEYS.notes, noteInitialState));
-  const [organisation, setOrganisation] = useState<OrganisationState>(() => {
-    const fallback: OrganisationState = {
-      evenements: evenementsSeed,
-      taches: tachesSeed,
-      rappels: rappelsSeed,
-    };
-    return readStorage(STORAGE_KEYS.organisation, fallback);
-  });
-  const [activities, setActivities] = useState<WidgetActivity[]>(() => activitiesSeed);
-  const [widgetLayout, setWidgetLayout] = useState<WidgetLayout>(() => readStorage(STORAGE_KEYS.layout, defaultLayout));
+interface AppDataProviderProps extends PropsWithChildren {
+  user: User;
+}
+
+export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
+  const supabase = getSupabaseClient();
+  const defaultProfile = useMemo(() => createDefaultProfile(user), [user]);
+
+  const [drive, setDrive] = useState<DriveState>(() =>
+    readStorage(STORAGE_KEYS.drive, createDefaultDriveState())
+  );
+  const [notes, setNotes] = useState<NotesState>(() =>
+    readStorage(STORAGE_KEYS.notes, createDefaultNotesState())
+  );
+  const [organisation, setOrganisation] = useState<OrganisationState>(() =>
+    readStorage(STORAGE_KEYS.organisation, createDefaultOrganisationState())
+  );
+  const [activities, setActivities] = useState<WidgetActivity[]>(() =>
+    readStorage(STORAGE_KEYS.activities, [] as WidgetActivity[])
+  );
+  const [widgetLayout, setWidgetLayout] = useState<WidgetLayout>(() =>
+    readStorage(STORAGE_KEYS.layout, defaultLayout)
+  );
   const [clipboard, setClipboard] = useState<ClipboardState>(initialClipboard);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => readStorage(STORAGE_KEYS.chat, initialMessages));
-  const [profile, setProfile] = useState<UserProfile>(() => readStorage(STORAGE_KEYS.profile, defaultProfile));
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
+    readStorage(STORAGE_KEYS.chat, defaultMessages)
+  );
+  const [profile, setProfile] = useState<UserProfile>(() =>
+    readStorage(STORAGE_KEYS.profile, defaultProfile)
+  );
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(false);
+  const [isPersisting, setIsPersisting] = useState(false);
+
+  // Intégration Supabase : hydratation initiale des espaces pour l'utilisateur actif.
+  const hydrateFromSupabase = useCallback(async () => {
+    if (!supabase) {
+      setIsHydrated(true);
+      return;
+    }
+    setIsHydrating(true);
+    try {
+      const { data, error } = await supabase
+        .from("app_state")
+        .select("drive, notes, organisation, activities, widget_layout, profile, chat")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116" && error.code !== "PGRST123") {
+        console.error("Hydratation Supabase impossible", error.message);
+      }
+
+      if (!data) {
+        const defaults = {
+          drive: createDefaultDriveState(),
+          notes: createDefaultNotesState(),
+          organisation: createDefaultOrganisationState(),
+          activities: [] as WidgetActivity[],
+          widget_layout: defaultLayout,
+          profile: defaultProfile,
+          chat: defaultMessages,
+        };
+        await supabase.from("app_state").upsert({ user_id: user.id, ...defaults });
+        setDrive(defaults.drive);
+        setNotes(defaults.notes);
+        setOrganisation(defaults.organisation);
+        setActivities(defaults.activities);
+        setWidgetLayout(defaults.widget_layout);
+        setProfile(defaultProfile);
+        setChatMessages(defaults.chat);
+      } else {
+        const driveState = (data.drive as DriveState | null) ?? createDefaultDriveState();
+        setDrive(driveState.rootId ? driveState : createDefaultDriveState());
+        setNotes((data.notes as NotesState | null) ?? createDefaultNotesState());
+        setOrganisation((data.organisation as OrganisationState | null) ?? createDefaultOrganisationState());
+        setActivities((data.activities as WidgetActivity[] | null) ?? []);
+        setWidgetLayout((data.widget_layout as WidgetLayout | null) ?? defaultLayout);
+        const profileState = (data.profile as UserProfile | null) ?? defaultProfile;
+        setProfile({
+          ...defaultProfile,
+          ...profileState,
+          id: defaultProfile.id,
+          email: defaultProfile.email,
+        });
+        setChatMessages((data.chat as ChatMessage[] | null) ?? defaultMessages);
+      }
+
+      setIsHydrated(true);
+    } catch (error) {
+      console.error("Hydratation Supabase impossible", error);
+      setIsHydrated(true);
+    } finally {
+      setIsHydrating(false);
+    }
+  }, [defaultProfile, supabase, user.id]);
+
+  useEffect(() => {
+    void hydrateFromSupabase();
+  }, [hydrateFromSupabase]);
+
+  useEffect(() => {
+    setProfile((prev) => {
+      if (prev.id !== defaultProfile.id || prev.email !== defaultProfile.email) {
+        return { ...prev, id: defaultProfile.id, email: defaultProfile.email };
+      }
+      return prev;
+    });
+  }, [defaultProfile.email, defaultProfile.id]);
+
+  const isSyncing = isHydrating || isPersisting;
+
+  // Intégration Supabase : persistance centralisée de l'état utilisateur.
+  const persistState = useCallback(async () => {
+    if (!supabase || !isHydrated) {
+      return;
+    }
+    setIsPersisting(true);
+    try {
+      const payload = {
+        user_id: user.id,
+        drive,
+        notes,
+        organisation,
+        activities,
+        widget_layout: widgetLayout,
+        profile,
+        chat: chatMessages,
+        updated_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from("app_state").upsert(payload);
+      if (error) {
+        console.error("Synchronisation Supabase impossible", error.message);
+      }
+    } finally {
+      setIsPersisting(false);
+    }
+  }, [activities, chatMessages, drive, isHydrated, notes, organisation, profile, supabase, user.id, widgetLayout]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.drive, drive);
-  }, [drive]);
+    void persistState();
+  }, [drive, persistState]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.notes, notes);
-  }, [notes]);
+    void persistState();
+  }, [notes, persistState]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.organisation, organisation);
-  }, [organisation]);
+    void persistState();
+  }, [organisation, persistState]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.layout, widgetLayout);
-  }, [widgetLayout]);
+    void persistState();
+  }, [widgetLayout, persistState]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.profile, profile);
-  }, [profile]);
+    void persistState();
+  }, [profile, persistState]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.chat, chatMessages);
-  }, [chatMessages]);
+    void persistState();
+  }, [chatMessages, persistState]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.activities, activities);
+    void persistState();
+  }, [activities, persistState]);
 
   const addActivity = useCallback(
     (activity: Omit<WidgetActivity, "id" | "date"> & { type: WidgetActivity["type"] }) => {
@@ -765,6 +948,9 @@ export const AppDataProvider = ({ children }: PropsWithChildren) => {
       clipboard,
       chatMessages,
       profile,
+      isHydrated,
+      isSyncing,
+      refreshFromSupabase: hydrateFromSupabase,
       createDriveFolder,
       uploadDriveFiles,
       renameDriveNode,
@@ -797,18 +983,23 @@ export const AppDataProvider = ({ children }: PropsWithChildren) => {
       activities,
       addActivity,
       addChatMessage,
-      replaceChatMessages,
+      clearClipboard,
       chatMessages,
       clipboard,
+      copyDriveNode,
       createDriveFolder,
       createNote,
       createNoteFolder,
+      cutDriveNode,
       deleteDriveNode,
       deleteNote,
       deleteEvenement,
       deleteRappel,
       deleteTache,
       drive,
+      hydrateFromSupabase,
+      isHydrated,
+      isSyncing,
       moveDriveNode,
       moveNote,
       notes,
@@ -816,8 +1007,9 @@ export const AppDataProvider = ({ children }: PropsWithChildren) => {
       pasteClipboard,
       profile,
       renameDriveNode,
-      updateDriveFile,
       renameNoteFolder,
+      replaceChatMessages,
+      updateDriveFile,
       saveEvenement,
       saveRappel,
       saveTache,
@@ -826,9 +1018,6 @@ export const AppDataProvider = ({ children }: PropsWithChildren) => {
       updateProfile,
       uploadDriveFiles,
       widgetLayout,
-      cutDriveNode,
-      copyDriveNode,
-      clearClipboard,
     ]
   );
 
