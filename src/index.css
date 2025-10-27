@@ -579,10 +579,11 @@ label {
   min-width: 0;
 }
 
+/* Ajustement : alignement flexible pour éviter les débordements dans les widgets. */
 .widget-list__link {
   width: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
@@ -613,12 +614,17 @@ label {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  flex: 1;
 }
 
+/* Ajustement : métadonnées tronquées pour rester dans le cadre des cartes. */
 .widget-list__meta {
   color: var(--text-tertiary);
   font-size: 0.7rem;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .widget-list__tags {
@@ -635,11 +641,15 @@ label {
   font-size: 0.75rem;
 }
 
+/* Ajustement : colonnes secondaires limitées pour éviter tout chevauchement. */
 .widget-list__aside {
   color: var(--text-secondary);
   font-size: 0.78rem;
   white-space: nowrap;
   margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: clamp(72px, 32%, 128px);
 }
 
 /* Modification : synthèse compacte du widget Organisation. */

@@ -35,12 +35,18 @@ export const NotesPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  const folderTree = useMemo(() => buildFolderTree(notes.folders, null), [notes.folders]);
+  const rootFolderId = useMemo(
+    () => folderTree.find((folder) => folder.parentId === null)?.id ?? null,
+    [folderTree]
+  );
+
   useEffect(() => {
-    const firstFolder = Object.values(notes.folders).find((folder) => folder.parentId === "note-root");
-    if (firstFolder && !selectedFolderId) {
-      setSelectedFolderId(firstFolder.id);
+    if (!selectedFolderId && rootFolderId) {
+      // Correctif : sélectionner automatiquement le dossier racine pour réactiver les actions.
+      setSelectedFolderId(rootFolderId);
     }
-  }, [notes.folders, selectedFolderId]);
+  }, [rootFolderId, selectedFolderId]);
 
   useEffect(() => {
     const state = location.state as { focusNoteId?: string } | null;
@@ -68,8 +74,6 @@ export const NotesPage = () => {
       setDialogValue("");
     }
   }, [dialog, notes.folders]);
-
-  const folderTree = useMemo(() => buildFolderTree(notes.folders, "note-root"), [notes.folders]);
 
   const notesForFolder = useMemo(() => {
     if (!selectedFolderId) return [];
@@ -140,7 +144,9 @@ export const NotesPage = () => {
               onDoubleClick={() => handleRenameFolder(folder.id)}
             >
               <span>{folder.nom}</span>
-              {folder.id !== "note-root" && <small>{Object.values(notes.notes).filter((note) => note.dossierId === folder.id).length}</small>}
+              {folder.id !== rootFolderId && (
+                <small>{Object.values(notes.notes).filter((note) => note.dossierId === folder.id).length}</small>
+              )}
             </button>
           ))}
         </nav>

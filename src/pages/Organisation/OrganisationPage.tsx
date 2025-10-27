@@ -17,6 +17,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
 import { ActionDialog } from "../../components/common/ActionDialog";
 import type { Evenement, Rappel, Tache } from "../../types";
+import { truncateText } from "../../utils/formatters";
 
 const VIEWS = [
   { id: "jour" as const, label: "Jour", icon: <PiCalendarFill size={16} /> },
@@ -429,7 +430,8 @@ export const OrganisationPage = () => {
                 {remindersForDay(selectedDate).map((reminder) => (
                   <li key={reminder.id}>
                     <button type="button" onClick={() => openEditor("rappel", reminder.id)}>
-                      <strong>{reminder.titre}</strong>
+                      {/* Nouveau : limitation à 7 caractères pour garder une liste parfaitement lisible. */}
+                      <strong>{truncateText(reminder.titre, 7)}</strong>
                       <span>{reminder.description ?? ""}</span>
                     </button>
                     <button

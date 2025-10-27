@@ -20,3 +20,7 @@ export const formatCalendarDate = (isoDate: string) => {
 
 export const formatWeight = (weight?: number) =>
   weight ? `${weight.toFixed(1).replace(".", ",")} Mo` : "-";
+
+// Ajustement : fonction utilitaire centralisée pour tronquer proprement les libellés.
+export const truncateText = (value: string, maxLength: number) =>
+  value.length > maxLength ? `${value.slice(0, maxLength)}…` : value;

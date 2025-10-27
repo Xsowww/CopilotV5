@@ -1,6 +1,6 @@
 import { MdOutlineCalendarMonth } from "react-icons/md";
 import { WidgetCard } from "../common/WidgetCard";
-import { formatCalendarDate } from "../../utils/formatters";
+import { formatCalendarDate, truncateText } from "../../utils/formatters";
 import type { Evenement, Rappel, Tache } from "../../types";
 
 interface OrganisationWidgetProps {
@@ -91,6 +91,7 @@ export const OrganisationWidget = ({
       return <p className="widget-card__empty">Aucun rappel planifié.</p>;
     }
     const date = formatCalendarDate(prochainRappel.date);
+    const titre = truncateText(prochainRappel.titre, 7);
     return (
       <button
         type="button"
@@ -105,7 +106,8 @@ export const OrganisationWidget = ({
           <span>{date.mois}</span>
         </div>
         <div className="organisation-widget__details">
-          <p className="organisation-widget__title">{prochainRappel.titre}</p>
+          {/* Mise à jour : rappel tronqué pour rester lisible dans le widget compact. */}
+          <p className="organisation-widget__title">{titre}</p>
           <span className="organisation-widget__meta">{prochainRappel.description ?? "Pas de description"}</span>
         </div>
       </button>
