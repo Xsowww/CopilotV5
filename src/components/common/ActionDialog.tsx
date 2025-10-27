@@ -11,6 +11,7 @@ interface ActionDialogProps {
   onConfirm: () => void;
   onClose: () => void;
   confirmDisabled?: boolean;
+  confirmTone?: "primary" | "danger";
 }
 
 const isDomReady = typeof document !== "undefined";
@@ -25,6 +26,7 @@ export const ActionDialog = ({
   onConfirm,
   onClose,
   confirmDisabled = false,
+  confirmTone = "primary",
 }: ActionDialogProps) => {
   if (!open || !isDomReady) return null;
 
@@ -49,7 +51,7 @@ export const ActionDialog = ({
           </button>
           <button
             type="button"
-            className="btn-primary"
+            className={confirmTone === "danger" ? "btn-danger" : "btn-primary"}
             onClick={onConfirm}
             disabled={confirmDisabled}
           >

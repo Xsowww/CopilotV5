@@ -92,18 +92,19 @@ export const OrganisationPage = () => {
         return;
       }
       const completedAt = new Date(task.termineeLe).getTime();
-      const remainingMs = Math.max(0, 86_400_000 - (now - completedAt));
+      const elapsed = now - completedAt;
+      const remainingMs = Math.max(0, 86_400_000 - elapsed);
       if (remainingMs <= 0) {
         countdowns[task.id] = "La tâche sera supprimée d'une minute à l'autre";
         return;
       }
-      if (remainingMs >= 3_600_000) {
-        const hours = Math.ceil(remainingMs / 3_600_000);
-        countdowns[task.id] = `La tâche sera supprimée dans ${hours} h`;
+      if (remainingMs > 3_600_000) {
+        const displayHours = Math.min(24, Math.max(1, Math.ceil((remainingMs - 60_000) / 3_600_000)));
+        countdowns[task.id] = `La tâche sera supprimée dans ${displayHours} h`;
         return;
       }
-      const minutes = Math.ceil(remainingMs / 60_000);
-      countdowns[task.id] = `La tâche sera supprimée dans ${minutes} min`;
+      const displayMinutes = Math.max(1, Math.ceil(remainingMs / 60_000));
+      countdowns[task.id] = `La tâche sera supprimée dans ${displayMinutes} min`;
     });
     return countdowns;
   }, [now, organisation.taches]);

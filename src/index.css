@@ -22,7 +22,7 @@
   --radius-md: 20px;
   --radius-sm: 14px;
   --glass-blur: 22px;
-  --dashboard-widget-height: 268px; /* Ajustement : widgets légèrement plus hauts pour accueillir les listes récentes. */
+  --dashboard-widget-height: 296px; /* Ajustement : widgets plus hauts pour conserver deux éléments sans débordement. */
   font-family: "SF Pro Display", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -562,13 +562,20 @@ label {
 }
 
 .btn-danger {
-  background: linear-gradient(135deg, rgba(255, 118, 140, 0.95), rgba(214, 64, 92, 0.9));
-  color: #2a030b;
-  box-shadow: 0 16px 32px -18px rgba(214, 64, 92, 0.75);
+  background: linear-gradient(135deg, rgba(255, 118, 140, 0.92), rgba(214, 64, 92, 0.88));
+  color: #210308;
+  box-shadow: 0 18px 42px -20px rgba(214, 64, 92, 0.8);
+  border-radius: 999px;
+  padding: 0.65rem 1.5rem;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .btn-danger:hover {
   transform: translateY(-1px);
+  box-shadow: 0 22px 46px -18px rgba(214, 64, 92, 0.85);
 }
 
 .btn-tertiary {
@@ -587,10 +594,10 @@ label {
   background: linear-gradient(160deg, rgba(36, 74, 160, 0.85), rgba(15, 40, 102, 0.85));
   border-radius: var(--radius-md);
   border: 1px solid var(--border-strong);
-  padding: 20px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   backdrop-filter: blur(var(--glass-blur));
   color: var(--text-primary);
@@ -650,7 +657,7 @@ label {
 .widget-card__content {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   flex: 1;
   min-height: 0;
   overflow: hidden; /* Correctif : maintien les contenus internes dans la hauteur fixe des widgets. */
@@ -660,7 +667,7 @@ label {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   flex: 1;
   min-height: 0;
@@ -671,7 +678,7 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: 10px;
   font-size: 0.9rem;
   min-width: 0;
   min-height: 0;
@@ -683,8 +690,8 @@ label {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 9px 10px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid transparent;
@@ -702,12 +709,12 @@ label {
 
 .widget-list__title {
   font-weight: 600;
-  font-size: 0.95rem;
-  line-height: 1.3;
+  font-size: 0.92rem;
+  line-height: 1.35;
   white-space: normal;
   word-break: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 4; /* Ajustement : plus de lignes visibles tout en restant contenus. */
+  -webkit-line-clamp: 3; /* Ajustement : contenu lisible sans dépasser la carte. */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -723,10 +730,13 @@ label {
 /* Ajustement : métadonnées tronquées pour rester dans le cadre des cartes. */
 .widget-list__meta {
   color: var(--text-tertiary);
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   white-space: normal;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .widget-list__tags {
@@ -745,19 +755,19 @@ label {
 
 /* Ajustement : colonnes secondaires limitées pour éviter tout chevauchement. */
 .widget-list__aside {
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   font-size: 0.78rem;
   white-space: nowrap;
   margin-left: auto;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: clamp(72px, 32%, 128px);
+  max-width: clamp(96px, 36%, 160px);
 }
 
 /* Modification : synthèse compacte du widget Organisation. */
 .organisation-widget {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   min-width: 0;
   min-height: 0;
@@ -769,7 +779,7 @@ label {
   gap: 8px;
   padding: 12px;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   min-width: 0;
   min-height: 0;
@@ -838,7 +848,7 @@ label {
 }
 
 .organisation-widget__meta {
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--text-tertiary);
   white-space: normal;
   word-break: break-word;
@@ -1052,17 +1062,17 @@ label {
 
 .drive-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
 }
 
 .drive-grid__item {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 14px 12px;
+  padding: 10px 9px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
@@ -1081,9 +1091,9 @@ label {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
   box-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.18);
@@ -1108,7 +1118,7 @@ label {
 }
 
 .drive-grid__name {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-primary);
   word-break: break-word;
@@ -1312,17 +1322,17 @@ label {
 
 .notification-toast {
   position: fixed;
-  top: 8px;
+  top: 12px;
   left: 50%;
   transform: translate(-50%, 0);
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 18px 28px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: linear-gradient(160deg, rgba(12, 32, 88, 0.95), rgba(24, 60, 140, 0.92));
-  box-shadow: 0 16px 46px -18px rgba(3, 13, 42, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  padding: 20px 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(138, 192, 255, 0.65);
+  background: linear-gradient(170deg, rgba(18, 46, 118, 0.96), rgba(58, 110, 210, 0.94));
+  box-shadow: 0 24px 60px -20px rgba(3, 13, 42, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25);
   color: var(--text-primary);
   z-index: 200;
   animation: toast-pop 240ms ease-out;

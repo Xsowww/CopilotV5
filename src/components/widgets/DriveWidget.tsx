@@ -12,13 +12,13 @@ interface DriveWidgetProps {
   onItemNavigate?: (item: DriveNode) => void;
 }
 
-const MAX_WIDGET_ITEMS = 1;
+const MAX_WIDGET_ITEMS = 2;
 
 export const DriveWidget = ({ items, loading, onOpen, disabled = false, onItemNavigate }: DriveWidgetProps) => {
   const latest = useMemo(
     () => items.slice(0, MAX_WIDGET_ITEMS),
     [items]
-  ); // Limite l'aperçu au dernier élément pour éviter tout débordement visuel.
+  ); // Ajustement : conserve deux éléments récents tout en gardant le widget lisible.
 
   return (
     <WidgetCard

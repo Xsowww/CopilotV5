@@ -133,6 +133,7 @@ interface AppDataContextValue {
   clearClipboard: () => void;
   createNoteFolder: (parentId: string, nom: string) => string;
   renameNoteFolder: (folderId: string, nom: string) => void;
+  deleteNoteFolder: (folderId: string) => void;
   createNote: (payload: { dossierId: string; titre?: string }) => string;
   updateNote: (noteId: string, contenu: string, titre?: string) => void;
   deleteNote: (noteId: string) => void;
@@ -832,6 +833,62 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     });
   }, []);
 
+  // Nouvelle fonctionnalité : suppression récursive de dossiers de notes avec nettoyage des enfants.
+  const deleteNoteFolder = useCallback(
+    (folderId: string) => {
+      setNotes((prev) => {
+        const target = prev.folders[folderId];
+        if (!target || target.parentId === null) {
+          return prev;
+        }
+
+        const folders = { ...prev.folders };
+        const notesMap = { ...prev.notes };
+        const toDelete = new Set<string>();
+
+        const collect = (id: string) => {
+          if (toDelete.has(id)) {
+            return;
+          }
+          toDelete.add(id);
+          const folder = folders[id];
+          folder?.enfants.forEach((childId) => collect(childId));
+        };
+
+        collect(folderId);
+
+        const nextFolders: Record<string, NoteFolder> = {};
+        Object.values(folders).forEach((folder) => {
+          if (toDelete.has(folder.id)) {
+            return;
+          }
+          nextFolders[folder.id] = {
+            ...folder,
+            enfants: folder.enfants.filter((childId) => !toDelete.has(childId)),
+          };
+        });
+
+        const nextNotes: Record<string, Note> = {};
+        Object.entries(notesMap).forEach(([noteId, note]) => {
+          if (note.dossierId && toDelete.has(note.dossierId)) {
+            return;
+          }
+          nextNotes[noteId] = note;
+        });
+
+        return { folders: nextFolders, notes: nextNotes };
+      });
+
+      addActivity({
+        type: "notes",
+        titre: "Dossier supprimé",
+        description: "Un dossier de notes a été retiré",
+        utilisateur: profile.nom,
+      });
+    },
+    [addActivity, profile.nom]
+  );
+
   const createNote = useCallback(
     ({ dossierId, titre }: { dossierId: string; titre?: string }) => {
       const id = crypto.randomUUID();
@@ -1082,6 +1139,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       clearClipboard,
       createNoteFolder,
       renameNoteFolder,
+      deleteNoteFolder,
       createNote,
       updateNote,
       deleteNote,
@@ -1111,6 +1169,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       createDriveFolder,
       createNote,
       createNoteFolder,
+      deleteNoteFolder,
       cutDriveNode,
       deleteDriveNode,
       deleteNote,

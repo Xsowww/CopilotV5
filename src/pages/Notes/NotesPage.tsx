@@ -26,6 +26,7 @@ type NotesDialogState =
   | { open: false }
   | { open: true; type: "create-folder"; parentId: string }
   | { open: true; type: "rename-folder"; folderId: string }
+  | { open: true; type: "delete-folder"; folderId: string }
   | { open: true; type: "delete-note"; noteId: string };
 
 type NotesContextTarget =
@@ -34,7 +35,16 @@ type NotesContextTarget =
   | { kind: "list" };
 
 export const NotesPage = () => {
-  const { notes, createNoteFolder, renameNoteFolder, createNote, updateNote, deleteNote, moveNote } = useAppData();
+  const {
+    notes,
+    createNoteFolder,
+    renameNoteFolder,
+    deleteNoteFolder,
+    createNote,
+    updateNote,
+    deleteNote,
+    moveNote,
+  } = useAppData();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<NotesDialogState>({ open: false });
@@ -126,6 +136,7 @@ export const NotesPage = () => {
   };
 
   const isFolderDialog = dialog.open && (dialog.type === "create-folder" || dialog.type === "rename-folder");
+  const isDeleteFolderDialog = dialog.open && dialog.type === "delete-folder";
   const isDeleteNoteDialog = dialog.open && dialog.type === "delete-note";
 
   const handleCreateFolder = () => {
@@ -142,6 +153,11 @@ export const NotesPage = () => {
 
   const handleRenameFolder = (folderId: string) => {
     setDialog({ open: true, type: "rename-folder", folderId });
+    closeContextMenu();
+  };
+
+  const handleDeleteFolder = (folderId: string) => {
+    setDialog({ open: true, type: "delete-folder", folderId });
     closeContextMenu();
   };
 
@@ -323,6 +339,14 @@ export const NotesPage = () => {
                   Renommer
                 </button>
               </li>
+              {notes.folders[contextMenu.payload.id]?.parentId !== null && (
+                <li>
+                  {/* Correctif : ajout de la suppression directe des dossiers hors racine. */}
+                  <button type="button" onClick={() => handleDeleteFolder(contextMenu.payload!.id)}>
+                    Supprimer
+                  </button>
+                </li>
+              )}
             </>
           )}
           {contextMenu.payload?.kind === "note" && (
@@ -391,6 +415,30 @@ export const NotesPage = () => {
             placeholder="Donne un nom à ton dossier"
           />
         </label>
+      </ActionDialog>
+
+      <ActionDialog
+        open={isDeleteFolderDialog}
+        title="Supprimer le dossier"
+        description="Le dossier et son contenu seront retirés de Copilot."
+        confirmLabel="Supprimer"
+        confirmTone="danger"
+        onClose={closeDialog}
+        onConfirm={() => {
+          if (!dialog.open || dialog.type !== "delete-folder") return;
+          const folder = notes.folders[dialog.folderId];
+          if (!folder || folder.parentId === null) {
+            closeDialog();
+            return;
+          }
+          const fallback = folder.parentId ?? rootFolderId;
+          deleteNoteFolder(dialog.folderId);
+          setSelectedFolderId(fallback ?? null);
+          setSelectedNoteId(null);
+          closeDialog();
+        }}
+      >
+        <p>Cette action supprimera également les sous-dossiers et les notes qu'il contient.</p>
       </ActionDialog>
 
       <ActionDialog
