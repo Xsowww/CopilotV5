@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { PiSparkleFill } from "react-icons/pi";
 import { WidgetCard } from "../common/WidgetCard";
 import { formatRelativeDate } from "../../utils/formatters";
@@ -11,7 +12,7 @@ interface ActivityWidgetProps {
   onActivityNavigate?: (activity: WidgetActivity) => void;
 }
 
-const MAX_WIDGET_ITEMS = 3;
+const MAX_WIDGET_ITEMS = 1;
 
 export const ActivityWidget = ({
   activities,
@@ -20,7 +21,10 @@ export const ActivityWidget = ({
   disabled = false,
   onActivityNavigate,
 }: ActivityWidgetProps) => {
-  const highlights = activities.slice(0, MAX_WIDGET_ITEMS); // Modification : réduire le flux pour garder le widget léger.
+  const highlights = useMemo(
+    () => activities.slice(0, MAX_WIDGET_ITEMS),
+    [activities]
+  ); // Limite l'aperçu au dernier événement pour conserver un widget léger et lisible.
 
   return (
     <WidgetCard

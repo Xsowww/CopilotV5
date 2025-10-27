@@ -56,6 +56,7 @@ export const OrganisationPage = () => {
     deleteTache,
     saveRappel,
     deleteRappel,
+    now,
   } = useAppData();
   const [view, setView] = useState<ViewId>("semaine");
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -82,6 +83,30 @@ export const OrganisationPage = () => {
     () => organisation.rappels.map((reminder) => ({ ...reminder, dateObj: toDate(reminder.date) })),
     [organisation.rappels]
   );
+
+  // Mise à jour : calcule un compte à rebours dynamique pour les tâches terminées (suppression à J+1).
+  const taskCountdowns = useMemo<Record<string, string>>(() => {
+    const countdowns: Record<string, string> = {};
+    organisation.taches.forEach((task) => {
+      if (task.statut !== "termine" || !task.termineeLe) {
+        return;
+      }
+      const completedAt = new Date(task.termineeLe).getTime();
+      const remainingMs = Math.max(0, 86_400_000 - (now - completedAt));
+      if (remainingMs <= 0) {
+        countdowns[task.id] = "La tâche sera supprimée d'une minute à l'autre";
+        return;
+      }
+      if (remainingMs >= 3_600_000) {
+        const hours = Math.ceil(remainingMs / 3_600_000);
+        countdowns[task.id] = `La tâche sera supprimée dans ${hours} h`;
+        return;
+      }
+      const minutes = Math.ceil(remainingMs / 60_000);
+      countdowns[task.id] = `La tâche sera supprimée dans ${minutes} min`;
+    });
+    return countdowns;
+  }, [now, organisation.taches]);
 
   const startOfCurrentWeek = startOfWeek(selectedDate, { locale: fr, weekStartsOn: 1 });
 
@@ -164,7 +189,7 @@ export const OrganisationPage = () => {
       closeContextMenu();
       return;
     }
-    saveTache({ ...task, statut: "termine" });
+    saveTache({ ...task, statut: "termine", termineeLe: new Date().toISOString() });
     closeContextMenu();
   };
 
@@ -223,6 +248,10 @@ export const OrganisationPage = () => {
           priorite: (payload.priorite ?? "normale") as Tache["priorite"],
           statut: (payload.statut ?? "pas_commence") as Tache["statut"],
           echeance: payload.echeance ?? payload.date,
+          termineeLe:
+            (payload.statut ?? "pas_commence") === "termine"
+              ? payload.termineeLe ?? new Date().toISOString()
+              : undefined,
         });
         break;
       case "rappel":
@@ -356,7 +385,7 @@ export const OrganisationPage = () => {
                           openContextMenu(contextEvent, { kind: "evenement", id: event.id });
                         }}
                       >
-                        {truncateText(event.titre, 8)}
+                        {truncateText(event.titre, 7)}
                       </button>
                     ))}
                     {dayEvents.length > 3 && (
@@ -384,7 +413,7 @@ export const OrganisationPage = () => {
                         onClick={() => openEditor("evenement", event.id)}
                         onContextMenu={(contextEvent) => openContextMenu(contextEvent, { kind: "evenement", id: event.id })}
                       >
-                        <strong>{truncateText(event.titre, 8)}</strong>
+                        <strong>{truncateText(event.titre, 7)}</strong>
                         <span>{event.heure ?? "Toute la journée"}</span>
                       </button>
                     ))}
@@ -422,7 +451,7 @@ export const OrganisationPage = () => {
                       onContextMenu={(contextEvent) => openContextMenu(contextEvent, { kind: "evenement", id: event.id })}
                     >
                       <span>{event.heure ?? "Toute la journée"}</span>
-                      <strong>{truncateText(event.titre, 8)}</strong>
+                      <strong>{truncateText(event.titre, 7)}</strong>
                       {event.description && <small>{event.description}</small>}
                     </button>
                   ))
@@ -485,7 +514,9 @@ export const OrganisationPage = () => {
                         </button>
                       </div>
                       {isCompleted && (
-                        <p className="organisation-sidebar__scheduled">Sera supprimée automatiquement sous 24&nbsp;h</p>
+                        <p className="organisation-sidebar__scheduled">
+                          {taskCountdowns[task.id] ?? "La tâche sera supprimée dans 24 h"}
+                        </p>
                       )}
                     </li>
                   );

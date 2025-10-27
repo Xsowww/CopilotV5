@@ -66,6 +66,11 @@ export interface Tache extends OrganisationItemBase {
   priorite: Priority;
   statut: TaskStatus;
   echeance: string;
+  /**
+   * Horodatage local utilisé pour calculer le compte à rebours de suppression après validation.
+   * Ajout suite à la demande utilisateur d'afficher un timer dynamique avant purge automatique.
+   */
+  termineeLe?: string;
 }
 
 export interface Rappel extends OrganisationItemBase {
@@ -111,4 +116,13 @@ export interface WidgetLayout {
 export interface ClipboardState {
   elementId: string | null;
   mode: "copy" | "cut" | null;
+}
+
+export interface SystemNotification {
+  id: string;
+  titre: string;
+  message: string;
+  date: string;
+  lu: boolean;
+  niveau: "info" | "alerte";
 }

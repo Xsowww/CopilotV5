@@ -16,11 +16,22 @@ interface ProfileFormState {
   notificationsActives: boolean;
 }
 
+interface NotificationEntry {
+  key: string;
+  id: string;
+  titre: string;
+  type: "evenement" | "tache" | "rappel" | "systeme";
+  date: string;
+  info?: string;
+  target?: { route: string; state?: unknown };
+}
+
 const isDomReady = typeof document !== "undefined";
 
 export const TopBar = () => {
   const date = format(new Date(), "EEEE d MMMM yyyy", { locale: fr });
-  const { profile, updateProfile, organisation, isSyncing } = useAppData();
+  const { profile, updateProfile, organisation, isSyncing, notifications: systemNotifications, markNotificationsAsRead } =
+    useAppData();
   const { signOut } = useAuth();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -37,6 +48,8 @@ export const TopBar = () => {
   const knownNotificationsRef = useRef<Set<string>>(new Set());
   const audioContextRef = useRef<AudioContext | null>(null);
   const [unreadKeys, setUnreadKeys] = useState<Set<string>>(new Set<string>());
+  const hydratedNotificationsRef = useRef(false);
+  const [toast, setToast] = useState<{ key: string; titre: string; type: string } | null>(null);
   const navigate = useNavigate();
   const avatarSrc = profile.avatarUrl?.trim() ? profile.avatarUrl : "/vite.svg";
 
@@ -74,35 +87,53 @@ export const TopBar = () => {
     }
   }, [profile.notificationsActives]);
 
-  const notifications = useMemo(() => {
-    const items = [
+  // Mise à jour : fusionne les notifications système Supabase et les éléments Organisation pour un flux unifié.
+  const notifications = useMemo<NotificationEntry[]>(() => {
+    const base: NotificationEntry[] = [
+      ...systemNotifications
+        .slice()
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .map((item) => ({
+          key: `system-${item.id}`,
+          id: item.id,
+          titre: item.titre,
+          type: "systeme" as const,
+          date: item.date,
+          info: item.message,
+        })),
       ...organisation.evenements.map((event) => ({
+        key: `evenement-${event.id}`,
         id: event.id,
         titre: event.titre,
         type: "evenement" as const,
         date: event.date,
         info: event.heure ?? "Toute la journée",
+        target: { route: "/organisation", state: { focusOrganisation: { type: "evenement" as const, id: event.id } } },
       })),
       ...organisation.taches.map((task) => ({
+        key: `tache-${task.id}`,
         id: task.id,
         titre: task.titre,
         type: "tache" as const,
         date: task.echeance,
         info: `Priorité ${task.priorite}`,
+        target: { route: "/organisation", state: { focusOrganisation: { type: "tache" as const, id: task.id } } },
       })),
       ...organisation.rappels.map((reminder) => ({
+        key: `rappel-${reminder.id}`,
         id: reminder.id,
         titre: reminder.titre,
         type: "rappel" as const,
         date: reminder.date,
         info: reminder.description ?? "",
+        target: { route: "/organisation", state: { focusOrganisation: { type: "rappel" as const, id: reminder.id } } },
       })),
     ];
-    return items
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(0, 6);
-  }, [organisation]);
-  const hasUnread = profile.notificationsActives && unreadKeys.size > 0;
+    return base
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 8);
+  }, [organisation.evenements, organisation.rappels, organisation.taches, systemNotifications]);
+  const hasUnread = unreadKeys.size > 0;
 
   useEffect(() => {
     setForm({
@@ -116,22 +147,25 @@ export const TopBar = () => {
   }, [profile]);
 
   useEffect(() => {
-    // Ajout : détection des nouvelles notifications pour la pastille et le son.
-    const currentKeys = new Set(notifications.map((item) => `${item.type}-${item.id}`));
+    const currentKeys = new Set(notifications.map((item) => item.key));
+    if (!hydratedNotificationsRef.current) {
+      knownNotificationsRef.current = currentKeys;
+      hydratedNotificationsRef.current = true;
+      setUnreadKeys(new Set<string>());
+      return;
+    }
+
     const previousKeys = knownNotificationsRef.current;
-    const newKeys: string[] = [];
-    currentKeys.forEach((key) => {
-      if (!previousKeys.has(key)) {
-        newKeys.push(key);
-      }
-    });
+    const newKeys = notifications
+      .filter((item) => !previousKeys.has(item.key))
+      .map((item) => item.key);
+
     knownNotificationsRef.current = currentKeys;
+
     setUnreadKeys((prev) => {
       const next = new Set(prev);
       newKeys.forEach((key) => {
-        if (profile.notificationsActives) {
-          next.add(key);
-        }
+        next.add(key);
       });
       [...next].forEach((key) => {
         if (!currentKeys.has(key)) {
@@ -140,16 +174,15 @@ export const TopBar = () => {
       });
       return next;
     });
+
     if (profile.notificationsActives && newKeys.length > 0) {
       playNotificationSound();
+      const freshest = notifications.find((item) => item.key === newKeys[0]);
+      if (freshest) {
+        setToast({ key: freshest.key, titre: freshest.titre, type: freshest.type });
+      }
     }
   }, [notifications, profile.notificationsActives, playNotificationSound]);
-
-  useEffect(() => {
-    if (!profile.notificationsActives) {
-      setUnreadKeys(new Set<string>());
-    }
-  }, [profile.notificationsActives]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -173,10 +206,26 @@ export const TopBar = () => {
   }, [isNotificationsOpen]);
 
   useEffect(() => {
-    if (isNotificationsOpen) {
-      setUnreadKeys(new Set<string>());
+    if (!isNotificationsOpen) {
+      return;
     }
-  }, [isNotificationsOpen]);
+    setUnreadKeys(new Set<string>());
+    markNotificationsAsRead();
+  }, [isNotificationsOpen, markNotificationsAsRead]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setToast(null), 2_000);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!profile.notificationsActives) {
+      setToast(null);
+    }
+  }, [profile.notificationsActives]);
 
   useEffect(() => {
     if (!isProfileOpen) return;
@@ -266,7 +315,7 @@ export const TopBar = () => {
                 checked={form.notificationsActives}
                 onChange={(event) => handleChange("notificationsActives", event.target.checked)}
               />
-              Notifications sonores et pastille
+              Notifications (son & pop-up)
             </label>
             <div className="profile-dialog__actions">
               <button type="button" className="btn-secondary" onClick={() => setIsProfileOpen(false)}>
@@ -294,30 +343,31 @@ export const TopBar = () => {
   };
 
   return (
-    <header className="topbar">
-      <div className="topbar__left">
-        <PiCloudFill size={26} />
-        <div>
-          <p className="topbar__subtitle">Bienvenue, {profile.nom.split(" ")[0]}</p>
-          <h1 className="topbar__title">Tableau de bord étudiant</h1>
+    <>
+      <header className="topbar">
+        <div className="topbar__left">
+          <PiCloudFill size={26} />
+          <div>
+            <p className="topbar__subtitle">Bienvenue, {profile.nom.split(" ")[0]}</p>
+            <h1 className="topbar__title">Tableau de bord étudiant</h1>
+          </div>
         </div>
-      </div>
-      <div className="topbar__right">
-        <span className="topbar__date">{date}</span>
-        {isSyncing && <span className="topbar__sync">Synchronisation…</span>}
-        <div className="topbar__notifications" ref={notificationsRef}>
-          <button
-            type="button"
-            className={`topbar__action ${isNotificationsOpen ? "topbar__action--active" : ""}`.trim()}
-            aria-label="Notifications"
-            data-unread={hasUnread ? "true" : "false"}
-            onClick={() => {
-              setIsNotificationsOpen((prev) => !prev);
-              setIsProfileOpen(false);
-            }}
-          >
-            <PiBellSimpleFill size={18} />
-          </button>
+        <div className="topbar__right">
+          <span className="topbar__date">{date}</span>
+          {isSyncing && <span className="topbar__sync">Synchronisation…</span>}
+          <div className="topbar__notifications" ref={notificationsRef}>
+            <button
+              type="button"
+              className={`topbar__action ${isNotificationsOpen ? "topbar__action--active" : ""}`.trim()}
+              aria-label="Notifications"
+              data-unread={hasUnread ? "true" : "false"}
+              onClick={() => {
+                setIsNotificationsOpen((prev) => !prev);
+                setIsProfileOpen(false);
+              }}
+            >
+              <PiBellSimpleFill size={18} />
+            </button>
           {isNotificationsOpen && (
             <div className="notification-panel" role="dialog" aria-label="Notifications récentes">
               <header>
@@ -335,19 +385,19 @@ export const TopBar = () => {
                         ? "Événement"
                         : item.type === "tache"
                           ? "Tâche"
-                          : "Rappel";
+                          : item.type === "rappel"
+                            ? "Rappel"
+                            : "Notification";
                     return (
-                      <li key={`${item.type}-${item.id}`}>
+                      <li key={item.key}>
                         <button
                           type="button"
                           className="notification-panel__item"
                           onClick={() => {
-                            // Modification : accès direct depuis le panneau de notifications.
                             setIsNotificationsOpen(false);
-                            setUnreadKeys(new Set<string>());
-                            navigate("/organisation", {
-                              state: { focusOrganisation: { type: item.type, id: item.id } },
-                            });
+                            if (item.target) {
+                              navigate(item.target.route, { state: item.target.state });
+                            }
                           }}
                         >
                           <div>
@@ -384,6 +434,15 @@ export const TopBar = () => {
           {renderProfileDialog()}
         </div>
       </div>
-    </header>
+      </header>
+      {toast && profile.notificationsActives && (
+        <div className="notification-toast" role="status" aria-live="polite">
+          <span className={`notification-toast__type notification-toast__type--${toast.type}`}>
+            Nouvelle notification
+          </span>
+          <strong>{toast.titre}</strong>
+        </div>
+      )}
+    </>
   );
 };

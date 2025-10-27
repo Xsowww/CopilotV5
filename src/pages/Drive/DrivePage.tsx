@@ -4,6 +4,8 @@ import {
   PiCloudArrowUpFill,
   PiDotsThreeOutlineFill,
   PiFolderPlusFill,
+  PiFoldersFill,
+  PiFileTextFill,
 } from "react-icons/pi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
@@ -290,41 +292,38 @@ export const DrivePage = () => {
         </div>
       </header>
 
-      <div className="drive-table" role="grid">
-        <div className="drive-table__header" role="row">
-          <span>Nom</span>
-          <span>Type</span>
-          <span>Dernière modification</span>
-          <span>Taille/Partage</span>
-        </div>
-        <div className="drive-table__body">
-          {items.length === 0 ? (
-            <p className="widget-card__empty">Ce dossier est vide. Crée un dossier ou importe un fichier.</p>
-          ) : (
-            items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="drive-table__row"
-                role="row"
-                onDoubleClick={() => handleOpenNode(item)}
-                onContextMenu={(event) => openContextMenu(event, { targetId: item.id })}
-                onClick={() => item.type === "dossier" && handleOpenNode(item)}
-              >
-                <span>{item.nom}</span>
-                <span>{item.type === "dossier" ? "Dossier" : item.extension.toUpperCase()}</span>
-                <span>{formatRelativeDate(item.misAJourLe)}</span>
-                <span>
+      <div className="drive-grid" role="list">
+        {/* Mise à jour : affichage en grille inspiré des bureaux Windows pour les dossiers/fichiers. */}
+        {items.length === 0 ? (
+          <p className="drive-grid__empty">Ce dossier est vide. Crée un dossier ou importe un fichier.</p>
+        ) : (
+          items.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className="drive-grid__item"
+              role="listitem"
+              onDoubleClick={() => handleOpenNode(item)}
+              onContextMenu={(event) => openContextMenu(event, { targetId: item.id })}
+              onClick={() => item.type === "dossier" && handleOpenNode(item)}
+            >
+              <span className="drive-grid__icon" data-type={item.type}>
+                {item.type === "dossier" ? <PiFoldersFill size={44} /> : <PiFileTextFill size={40} />}
+              </span>
+              <div className="drive-grid__info">
+                <span className="drive-grid__name">{item.nom}</span>
+                <span className="drive-grid__meta">
                   {item.type === "fichier"
-                    ? formatWeight((item as DriveFileNode).poidsMo)
+                    ? `${item.extension.toUpperCase()} · ${formatWeight((item as DriveFileNode).poidsMo)}`
                     : item.partage
-                      ? "Partagé"
-                      : "Privé"}
+                      ? "Dossier partagé"
+                      : "Dossier privé"}
                 </span>
-              </button>
-            ))
-          )}
-        </div>
+                <span className="drive-grid__meta">{formatRelativeDate(item.misAJourLe)}</span>
+              </div>
+            </button>
+          ))
+        )}
       </div>
 
       {contextMenu.visible && (

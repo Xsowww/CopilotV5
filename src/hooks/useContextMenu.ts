@@ -23,8 +23,13 @@ export const useContextMenu = <Payload,>() => {
   const open = useCallback((event: ReactMouseEvent, payload: Payload) => {
     event.preventDefault();
     event.stopPropagation();
-    const x = event.clientX;
-    const y = event.clientY;
+    const native = event.nativeEvent as MouseEvent;
+    const scrollX = typeof window !== "undefined" ? window.scrollX : 0;
+    const scrollY = typeof window !== "undefined" ? window.scrollY : 0;
+    const fallbackX = typeof native.pageX === "number" ? native.pageX - scrollX : event.clientX;
+    const fallbackY = typeof native.pageY === "number" ? native.pageY - scrollY : event.clientY;
+    const x = Number.isFinite(native.clientX) ? native.clientX : fallbackX;
+    const y = Number.isFinite(native.clientY) ? native.clientY : fallbackY;
     // Ajustement : mémoriser la position réelle du clic avant repositionnement côté portail.
     setState({ visible: true, x, y, payload });
   }, []);

@@ -121,8 +121,8 @@ export const DashboardPage = () => {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [localLayout, setLocalLayout] = useState<WidgetLayout>(() => cloneLayout(widgetLayout));
   const [hasChanges, setHasChanges] = useState(false);
-  // Modification : limite centrale pour éviter que les listes ne débordent des cartes compactes.
-  const MAX_WIDGET_ITEMS = 3;
+  // Mise à jour : limiter chaque widget à un seul élément pour éviter tout débordement visuel.
+  const MAX_WIDGET_ITEMS = 1;
 
   useEffect(() => {
     if (!isCustomizing) {
@@ -153,8 +153,12 @@ export const DashboardPage = () => {
         const items = [...prev[activeContainer]];
         const activeIndex = items.indexOf(active.id as WidgetId);
         const overIndex = items.indexOf(over.id as WidgetId);
-        if (activeIndex !== overIndex) {
-          const reordered = arrayMove(items, activeIndex, overIndex);
+        if (activeIndex === -1) {
+          return prev;
+        }
+        const targetIndex = overIndex >= 0 ? overIndex : items.length - 1;
+        if (activeIndex !== targetIndex) {
+          const reordered = arrayMove(items, activeIndex, targetIndex);
           const nextLayout = { ...prev, [activeContainer]: reordered };
           setHasChanges(JSON.stringify(nextLayout) !== JSON.stringify(widgetLayout));
           return nextLayout;
@@ -162,7 +166,26 @@ export const DashboardPage = () => {
         return prev;
       }
 
-      return prev;
+      const activeItems = [...prev[activeContainer]];
+      const overItems = [...prev[overContainer]];
+      const activeIndex = activeItems.indexOf(active.id as WidgetId);
+      if (activeIndex === -1) {
+        return prev;
+      }
+      const [moved] = activeItems.splice(activeIndex, 1);
+      const overIndex = overItems.indexOf(over.id as WidgetId);
+      if (overIndex >= 0) {
+        overItems.splice(overIndex, 0, moved);
+      } else {
+        overItems.push(moved);
+      }
+      const nextLayout: WidgetLayout = {
+        ...prev,
+        [activeContainer]: activeItems,
+        [overContainer]: overItems,
+      };
+      setHasChanges(JSON.stringify(nextLayout) !== JSON.stringify(widgetLayout));
+      return nextLayout;
     });
   };
 

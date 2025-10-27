@@ -34,7 +34,7 @@ export const FloatingContextMenu = <Payload,>({
       return;
     }
     const element = ref.current;
-    const padding = 12;
+    const padding = 4;
     const { offsetWidth, offsetHeight } = element;
     let nextX = state.x;
     let nextY = state.y;
@@ -53,7 +53,7 @@ export const FloatingContextMenu = <Payload,>({
       return;
     }
     const handleResize = () => {
-      const padding = 12;
+      const padding = 4;
       setState((prev) => {
         const element = ref.current;
         if (!element) {

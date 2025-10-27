@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { PiNotebookFill } from "react-icons/pi";
 import { WidgetCard } from "../common/WidgetCard";
 import { formatRelativeDate } from "../../utils/formatters";
@@ -12,7 +13,7 @@ interface NotesWidgetProps {
   onItemNavigate?: (note: Note) => void;
 }
 
-const MAX_WIDGET_ITEMS = 3;
+const MAX_WIDGET_ITEMS = 1;
 
 export const NotesWidget = ({
   notes,
@@ -22,7 +23,10 @@ export const NotesWidget = ({
   disabled = false,
   onItemNavigate,
 }: NotesWidgetProps) => {
-  const principalesNotes = notes.slice(0, MAX_WIDGET_ITEMS); // Modification : limiter l'aperçu pour alléger la hauteur du widget.
+  const principalesNotes = useMemo(
+    () => notes.slice(0, MAX_WIDGET_ITEMS),
+    [notes]
+  ); // Limite l'aperçu au contenu le plus récent pour garder une carte compacte.
 
   return (
     <WidgetCard

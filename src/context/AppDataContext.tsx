@@ -20,6 +20,7 @@ import type {
   Note,
   NoteFolder,
   Rappel,
+  SystemNotification,
   Tache,
   UserProfile,
   WidgetActivity,
@@ -113,6 +114,8 @@ interface AppDataContextValue {
   clipboard: ClipboardState;
   chatMessages: ChatMessage[];
   profile: UserProfile;
+  notifications: SystemNotification[];
+  now: number;
   isHydrated: boolean;
   isSyncing: boolean;
   refreshFromSupabase: () => Promise<void>;
@@ -137,6 +140,8 @@ interface AppDataContextValue {
   addActivity: (activity: Omit<WidgetActivity, "id" | "date"> & { type: WidgetActivity["type"] }) => void;
   addChatMessage: (message: ChatMessage) => void;
   replaceChatMessages: (messages: ChatMessage[]) => void;
+  addNotification: (notification: { titre: string; message: string; niveau?: SystemNotification["niveau"] }) => void;
+  markNotificationsAsRead: (ids?: string[]) => void;
   saveEvenement: (evenement: Evenement) => void;
   deleteEvenement: (evenementId: string) => void;
   saveTache: (tache: Tache) => void;
@@ -165,6 +170,7 @@ const STORAGE_KEYS = {
   profile: "copilot-profile",
   chat: "copilot-chat",
   activities: "copilot-activities",
+  notifications: "copilot-notifications",
 };
 
 const isBrowser = typeof window !== "undefined";
@@ -267,6 +273,9 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
   const [activities, setActivities] = useState<WidgetActivity[]>(() =>
     readStorage(STORAGE_KEYS.activities, [] as WidgetActivity[])
   );
+  const [notifications, setNotifications] = useState<SystemNotification[]>(() =>
+    readStorage(STORAGE_KEYS.notifications, [] as SystemNotification[])
+  );
   const [widgetLayout, setWidgetLayout] = useState<WidgetLayout>(() =>
     readStorage(STORAGE_KEYS.layout, defaultLayout)
   );
@@ -280,6 +289,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
   const [isPersisting, setIsPersisting] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   // Intégration Supabase : hydratation initiale des espaces pour l'utilisateur actif.
   const hydrateFromSupabase = useCallback(async () => {
@@ -291,7 +301,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     try {
       const { data, error } = await supabase
         .from("app_state")
-        .select("drive, notes, organisation, activities, widget_layout, profile, chat")
+        .select("drive, notes, organisation, activities, widget_layout, profile, chat, notifications")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -308,6 +318,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
           widget_layout: defaultLayout,
           profile: defaultProfile,
           chat: defaultMessages,
+          notifications: [] as SystemNotification[],
         };
         await supabase.from("app_state").upsert({ user_id: user.id, ...defaults });
         setDrive(defaults.drive);
@@ -317,6 +328,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         setWidgetLayout(defaults.widget_layout);
         setProfile(defaultProfile);
         setChatMessages(defaults.chat);
+        setNotifications(defaults.notifications);
       } else {
         const driveState = (data.drive as DriveState | null) ?? createDefaultDriveState();
         setDrive(driveState.rootId ? driveState : createDefaultDriveState());
@@ -334,6 +346,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
           email: defaultProfile.email,
         });
         setChatMessages((data.chat as ChatMessage[] | null) ?? defaultMessages);
+        setNotifications((data.notifications as SystemNotification[] | null) ?? []);
       }
 
       setIsHydrated(true);
@@ -376,6 +389,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         widget_layout: widgetLayout,
         profile,
         chat: chatMessages,
+        notifications,
         updated_at: new Date().toISOString(),
       };
       const { error } = await supabase.from("app_state").upsert(payload);
@@ -385,7 +399,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     } finally {
       setIsPersisting(false);
     }
-  }, [activities, chatMessages, drive, isHydrated, notes, organisation, profile, supabase, user.id, widgetLayout]);
+  }, [activities, chatMessages, drive, isHydrated, notes, notifications, organisation, profile, supabase, user.id, widgetLayout]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEYS.drive, drive);
@@ -421,6 +435,22 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     writeStorage(STORAGE_KEYS.activities, activities);
     void persistState();
   }, [activities, persistState]);
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEYS.notifications, notifications);
+    void persistState();
+  }, [notifications, persistState]);
+
+  useEffect(() => {
+    if (!isBrowser) {
+      return;
+    }
+    const update = () => setNow(Date.now());
+    update();
+    // Mise à jour : rafraîchir l'horloge interne chaque minute pour piloter les compteurs de suppression.
+    const interval = window.setInterval(update, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   const addActivity = useCallback(
     (activity: Omit<WidgetActivity, "id" | "date"> & { type: WidgetActivity["type"] }) => {
@@ -891,6 +921,35 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     setChatMessages(messages);
   }, []);
 
+  const addNotification = useCallback(
+    ({ titre, message, niveau = "info" }: { titre: string; message: string; niveau?: SystemNotification["niveau"] }) => {
+      setNotifications((prev) => [
+        {
+          id: crypto.randomUUID(),
+          titre,
+          message,
+          date: new Date().toISOString(),
+          lu: false,
+          niveau,
+        },
+        ...prev,
+      ]);
+    },
+    []
+  );
+
+  const markNotificationsAsRead = useCallback((ids?: string[]) => {
+    setNotifications((prev) => {
+      if (!ids || ids.length === 0) {
+        return prev.map((notification) => (notification.lu ? notification : { ...notification, lu: true }));
+      }
+      const allowed = new Set(ids);
+      return prev.map((notification) =>
+        allowed.has(notification.id) ? { ...notification, lu: true } : notification
+      );
+    });
+  }, []);
+
   const saveEvenement = useCallback((evenement: Evenement) => {
     const payload: Evenement = {
       ...evenement,
@@ -917,13 +976,17 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
   }, []);
 
   const saveTache = useCallback((tache: Tache) => {
+    const normalized: Tache = {
+      ...tache,
+      termineeLe: tache.statut === "termine" ? tache.termineeLe ?? new Date().toISOString() : undefined,
+    };
     setOrganisation((prev) => {
-      const index = prev.taches.findIndex((item) => item.id === tache.id);
+      const index = prev.taches.findIndex((item) => item.id === normalized.id);
       const taches = [...prev.taches];
       if (index >= 0) {
-        taches[index] = tache;
+        taches[index] = normalized;
       } else {
-        taches.push(tache);
+        taches.push(normalized);
       }
       return { ...prev, taches };
     });
@@ -956,6 +1019,40 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     }));
   }, []);
 
+  // Mise à jour : surveillance des tâches terminées pour générer un décompte automatique et notifier la suppression à J+1.
+  useEffect(() => {
+    if (!isBrowser) {
+      return;
+    }
+    const interval = window.setInterval(() => {
+      const nowTimestamp = Date.now();
+      const expired: Tache[] = [];
+      setOrganisation((prev) => {
+        const remaining = prev.taches.filter((task) => {
+          if (task.statut === "termine" && task.termineeLe) {
+            const completedAt = new Date(task.termineeLe).getTime();
+            if (nowTimestamp - completedAt >= 86_400_000) {
+              expired.push(task);
+              return false;
+            }
+          }
+          return true;
+        });
+        if (expired.length === 0) {
+          return prev;
+        }
+        return { ...prev, taches: remaining };
+      });
+      expired.forEach((task) => {
+        addNotification({
+          titre: "Tâche archivée",
+          message: `"${task.titre}" a été supprimée après 24 heures de complétion.`,
+        });
+      });
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [addNotification]);
+
   const value = useMemo<AppDataContextValue>(
     () => ({
       drive,
@@ -966,6 +1063,8 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       clipboard,
       chatMessages,
       profile,
+      notifications,
+      now,
       isHydrated,
       isSyncing,
       refreshFromSupabase: hydrateFromSupabase,
@@ -990,6 +1089,8 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       addActivity,
       addChatMessage,
       replaceChatMessages,
+      addNotification,
+      markNotificationsAsRead,
       saveEvenement,
       deleteEvenement,
       saveTache,
@@ -1018,8 +1119,11 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       hydrateFromSupabase,
       isHydrated,
       isSyncing,
+      markNotificationsAsRead,
       moveDriveNode,
       moveNote,
+      notifications,
+      now,
       notes,
       organisation,
       pasteClipboard,
@@ -1027,6 +1131,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       renameDriveNode,
       renameNoteFolder,
       replaceChatMessages,
+      addNotification,
       updateDriveFile,
       saveEvenement,
       saveRappel,
