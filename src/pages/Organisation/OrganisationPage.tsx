@@ -16,8 +16,10 @@ import { PiCalendarBlankFill, PiCalendarCheckFill, PiCalendarFill, PiPlusBold } 
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
 import { ActionDialog } from "../../components/common/ActionDialog";
+import { FloatingContextMenu } from "../../components/common/FloatingContextMenu";
 import type { Evenement, Rappel, Tache } from "../../types";
 import { truncateText } from "../../utils/formatters";
+import { useContextMenu } from "../../hooks/useContextMenu";
 
 const VIEWS = [
   { id: "jour" as const, label: "Jour", icon: <PiCalendarFill size={16} /> },
@@ -35,6 +37,11 @@ interface EditorState {
 }
 
 type DeletionState = { open: false } | { open: true; type: EditorType; id: string; titre: string };
+
+type OrganisationContextTarget =
+  | { kind: "evenement"; id: string }
+  | { kind: "tache"; id: string }
+  | { kind: "rappel"; id: string };
 
 const toDate = (iso: string) => parseISO(iso);
 
@@ -56,6 +63,13 @@ export const OrganisationPage = () => {
   const [deletion, setDeletion] = useState<DeletionState>({ open: false });
   const location = useLocation();
   const navigate = useNavigate();
+  const {
+    state: contextMenu,
+    open: openContextMenu,
+    close: closeContextMenu,
+    setState: setContextMenuState,
+  } = useContextMenu<OrganisationContextTarget>();
+  // Ajout : menu contextuel transversal pour événements, tâches et rappels.
 
   const events = useMemo(() => organisation.evenements.map((event) => ({ ...event, dateObj: toDate(event.date) })), [
     organisation.evenements,
@@ -85,6 +99,7 @@ export const OrganisationPage = () => {
   const remindersForDay = (date: Date) => reminders.filter((reminder) => isSameDay(reminder.dateObj, date));
 
   const openEditor = (type: EditorType, id?: string) => {
+    closeContextMenu();
     if (type === "evenement" && id) {
       const existing = organisation.evenements.find((event) => event.id === id);
       if (existing) {
@@ -128,6 +143,7 @@ export const OrganisationPage = () => {
   };
 
   const handleDelete = (type: EditorType, id: string) => {
+    closeContextMenu();
     let titre = "";
     if (type === "evenement") {
       titre = organisation.evenements.find((item) => item.id === id)?.titre ?? "Événement";
@@ -139,6 +155,17 @@ export const OrganisationPage = () => {
       titre = organisation.rappels.find((item) => item.id === id)?.titre ?? "Rappel";
     }
     setDeletion({ open: true, type, id, titre });
+  };
+
+  const markTaskCompleted = (taskId: string) => {
+    const task = organisation.taches.find((item) => item.id === taskId);
+    if (!task) return;
+    if (task.statut === "termine") {
+      closeContextMenu();
+      return;
+    }
+    saveTache({ ...task, statut: "termine" });
+    closeContextMenu();
   };
 
   const confirmDeletion = () => {
@@ -316,9 +343,21 @@ export const OrganisationPage = () => {
                     <span className="calendar-month__weekday">{format(day, "EEEE", { locale: fr })}</span>
                     <span className="calendar-month__date">{format(day, "d", { locale: fr })}</span>
                     {dayEvents.slice(0, 3).map((event) => (
-                      <span key={event.id} className="calendar-month__event">
+                      <button
+                        key={event.id}
+                        type="button"
+                        className="calendar-month__event"
+                        onClick={(clickEvent) => {
+                          clickEvent.stopPropagation();
+                          openEditor("evenement", event.id);
+                        }}
+                        onContextMenu={(contextEvent) => {
+                          contextEvent.stopPropagation();
+                          openContextMenu(contextEvent, { kind: "evenement", id: event.id });
+                        }}
+                      >
                         {truncateText(event.titre, 8)}
-                      </span>
+                      </button>
                     ))}
                     {dayEvents.length > 3 && (
                       <span className="calendar-month__more">+{dayEvents.length - 3}</span>
@@ -343,6 +382,7 @@ export const OrganisationPage = () => {
                         type="button"
                         className="calendar-week__event"
                         onClick={() => openEditor("evenement", event.id)}
+                        onContextMenu={(contextEvent) => openContextMenu(contextEvent, { kind: "evenement", id: event.id })}
                       >
                         <strong>{truncateText(event.titre, 8)}</strong>
                         <span>{event.heure ?? "Toute la journée"}</span>
@@ -379,6 +419,7 @@ export const OrganisationPage = () => {
                       type="button"
                       className="calendar-day__event"
                       onClick={() => openEditor("evenement", event.id)}
+                      onContextMenu={(contextEvent) => openContextMenu(contextEvent, { kind: "evenement", id: event.id })}
                     >
                       <span>{event.heure ?? "Toute la journée"}</span>
                       <strong>{truncateText(event.titre, 8)}</strong>
@@ -404,26 +445,51 @@ export const OrganisationPage = () => {
               <p className="widget-card__empty">Aucune tâche prévue.</p>
             ) : (
               <ul className="organisation-sidebar__list">
-                {tasksForDay(selectedDate).map((task) => (
-                  <li key={task.id}>
-                    <button type="button" onClick={() => openEditor("tache", task.id)}>
-                      <div>
-                        <strong>{task.titre}</strong>
-                        <span>
-                          {task.priorite} · {task.statut.replace("_", " ")}
-                        </span>
-                      </div>
-                      <span>{formatHour(task.heure)}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className="organisation-sidebar__delete"
-                      onClick={() => handleDelete("tache", task.id)}
+                {tasksForDay(selectedDate).map((task) => {
+                  const isCompleted = task.statut === "termine";
+                  return (
+                    <li
+                      key={task.id}
+                      className={`organisation-sidebar__item${isCompleted ? " organisation-sidebar__item--completed" : ""}`}
                     >
-                      ×
-                    </button>
-                  </li>
-                ))}
+                      <button
+                        type="button"
+                        className="organisation-sidebar__item-button"
+                        onClick={() => openEditor("tache", task.id)}
+                        onContextMenu={(event) => openContextMenu(event, { kind: "tache", id: task.id })}
+                      >
+                        <div>
+                          <strong>{truncateText(task.titre, 18)}</strong>
+                          <span>
+                            {task.priorite} · {task.statut.replace("_", " ")}
+                          </span>
+                        </div>
+                        <span className="organisation-sidebar__time">{formatHour(task.heure)}</span>
+                      </button>
+                      <div className="organisation-sidebar__actions">
+                        {!isCompleted && (
+                          <button
+                            type="button"
+                            className="organisation-sidebar__action"
+                            onClick={() => markTaskCompleted(task.id)}
+                          >
+                            Terminer
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="organisation-sidebar__action organisation-sidebar__action--danger"
+                          onClick={() => handleDelete("tache", task.id)}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                      {isCompleted && (
+                        <p className="organisation-sidebar__scheduled">Sera supprimée automatiquement sous 24&nbsp;h</p>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </section>
@@ -440,19 +506,27 @@ export const OrganisationPage = () => {
             ) : (
               <ul className="organisation-sidebar__list organisation-sidebar__list--simple">
                 {remindersForDay(selectedDate).map((reminder) => (
-                  <li key={reminder.id}>
-                    <button type="button" onClick={() => openEditor("rappel", reminder.id)}>
-                      {/* Nouveau : limitation à 7 caractères pour garder une liste parfaitement lisible. */}
-                      <strong>{truncateText(reminder.titre, 7)}</strong>
-                      <span>{reminder.description ?? ""}</span>
-                    </button>
+                  <li key={reminder.id} className="organisation-sidebar__item">
                     <button
                       type="button"
-                      className="organisation-sidebar__delete"
-                      onClick={() => handleDelete("rappel", reminder.id)}
+                      className="organisation-sidebar__item-button organisation-sidebar__item-button--simple"
+                      onClick={() => openEditor("rappel", reminder.id)}
+                      onContextMenu={(event) => openContextMenu(event, { kind: "rappel", id: reminder.id })}
                     >
-                      ×
+                      <div>
+                        <strong>{truncateText(reminder.titre, 7)}</strong>
+                        <span>{truncateText(reminder.description ?? "", 24)}</span>
+                      </div>
                     </button>
+                    <div className="organisation-sidebar__actions organisation-sidebar__actions--single">
+                      <button
+                        type="button"
+                        className="organisation-sidebar__action organisation-sidebar__action--danger"
+                        onClick={() => handleDelete("rappel", reminder.id)}
+                      >
+                        Supprimer
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -460,6 +534,59 @@ export const OrganisationPage = () => {
           </section>
         </aside>
       </div>
+
+      {contextMenu.visible && (
+        <FloatingContextMenu state={contextMenu} setState={setContextMenuState}>
+          {/* Correctif : portail dédié pour aligner le menu contextuel sous le pointeur sans décalage. */}
+          {contextMenu.payload?.kind === "evenement" && (
+            <>
+              <li>
+                <button type="button" onClick={() => openEditor("evenement", contextMenu.payload!.id)}>
+                  Ouvrir
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => handleDelete("evenement", contextMenu.payload!.id)}>
+                  Supprimer
+                </button>
+              </li>
+            </>
+          )}
+          {contextMenu.payload?.kind === "tache" && (
+            <>
+              <li>
+                <button type="button" onClick={() => openEditor("tache", contextMenu.payload!.id)}>
+                  Ouvrir
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => markTaskCompleted(contextMenu.payload!.id)}>
+                  Marquer comme terminée
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => handleDelete("tache", contextMenu.payload!.id)}>
+                  Supprimer
+                </button>
+              </li>
+            </>
+          )}
+          {contextMenu.payload?.kind === "rappel" && (
+            <>
+              <li>
+                <button type="button" onClick={() => openEditor("rappel", contextMenu.payload!.id)}>
+                  Ouvrir
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => handleDelete("rappel", contextMenu.payload!.id)}>
+                  Supprimer
+                </button>
+              </li>
+            </>
+          )}
+        </FloatingContextMenu>
+      )}
 
       {editor && (
         <div className="organisation-editor" role="dialog" aria-modal="true">

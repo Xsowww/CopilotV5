@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PiNotePencilFill, PiPlusBold, PiTrashFill } from "react-icons/pi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
 import { ActionDialog } from "../../components/common/ActionDialog";
+import { FloatingContextMenu } from "../../components/common/FloatingContextMenu";
 import type { Note, NoteFolder } from "../../types";
 import { formatRelativeDate } from "../../utils/formatters";
+import { useContextMenu } from "../../hooks/useContextMenu";
 
 interface FolderTreeItem extends NoteFolder {
   depth: number;
@@ -26,6 +28,11 @@ type NotesDialogState =
   | { open: true; type: "rename-folder"; folderId: string }
   | { open: true; type: "delete-note"; noteId: string };
 
+type NotesContextTarget =
+  | { kind: "folder"; id: string }
+  | { kind: "note"; id: string }
+  | { kind: "list" };
+
 export const NotesPage = () => {
   const { notes, createNoteFolder, renameNoteFolder, createNote, updateNote, deleteNote, moveNote } = useAppData();
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
@@ -34,12 +41,33 @@ export const NotesPage = () => {
   const [dialogValue, setDialogValue] = useState("");
   const location = useLocation();
   const navigate = useNavigate();
+  const titleInputRef = useRef<HTMLInputElement | null>(null);
+  const {
+    state: contextMenu,
+    open: openContextMenu,
+    close: closeContextMenu,
+    setState: setContextMenuState,
+  } = useContextMenu<NotesContextTarget>();
+  // Ajout : gestion du clic droit sur les dossiers et notes depuis un hook unifié.
 
   const folderTree = useMemo(() => buildFolderTree(notes.folders, null), [notes.folders]);
   const rootFolderId = useMemo(
     () => folderTree.find((folder) => folder.parentId === null)?.id ?? null,
     [folderTree]
   );
+
+  const noteCountByFolder = useMemo(() => {
+    const counts: Record<string, number> = {};
+    Object.values(notes.notes).forEach((note) => {
+      const targetFolderId = note.dossierId ?? rootFolderId;
+      if (!targetFolderId) {
+        return;
+      }
+      // Correctif : compter également les notes stockées directement dans le dossier racine.
+      counts[targetFolderId] = (counts[targetFolderId] ?? 0) + 1;
+    });
+    return counts;
+  }, [notes.notes, rootFolderId]);
 
   useEffect(() => {
     if (!selectedFolderId && rootFolderId) {
@@ -103,26 +131,68 @@ export const NotesPage = () => {
   const handleCreateFolder = () => {
     if (!selectedFolderId) return;
     setDialog({ open: true, type: "create-folder", parentId: selectedFolderId });
+    closeContextMenu();
+  };
+
+  const handleCreateFolderFromTarget = (folderId: string) => {
+    setDialog({ open: true, type: "create-folder", parentId: folderId });
+    setDialogValue("");
+    closeContextMenu();
   };
 
   const handleRenameFolder = (folderId: string) => {
     setDialog({ open: true, type: "rename-folder", folderId });
+    closeContextMenu();
   };
 
   const handleCreateNote = () => {
     if (!selectedFolderId) return;
     const newId = createNote({ dossierId: selectedFolderId });
     setSelectedNoteId(newId);
+    closeContextMenu();
+  };
+
+  const handleCreateNoteInFolder = (folderId: string) => {
+    const newId = createNote({ dossierId: folderId });
+    setSelectedFolderId(folderId);
+    setSelectedNoteId(newId);
+    closeContextMenu();
+  };
+
+  const handleOpenNoteFromMenu = (noteId: string, focusTitle = false) => {
+    const target = notes.notes[noteId];
+    if (!target) {
+      closeContextMenu();
+      return;
+    }
+    setSelectedFolderId(target.dossierId);
+    setSelectedNoteId(noteId);
+    closeContextMenu();
+    if (focusTitle) {
+      requestAnimationFrame(() => {
+        titleInputRef.current?.focus();
+        titleInputRef.current?.select();
+      });
+    }
+  };
+
+  const handleDeleteNoteById = (noteId: string) => {
+    setDialog({ open: true, type: "delete-note", noteId });
+    closeContextMenu();
   };
 
   const handleDeleteNote = () => {
     if (!currentNote) return;
     setDialog({ open: true, type: "delete-note", noteId: currentNote.id });
+    closeContextMenu();
   };
 
   return (
     <div className="notes-page">
-      <aside className="notes-page__sidebar" onContextMenu={(event) => event.preventDefault()}>
+      <aside
+        className="notes-page__sidebar"
+        onContextMenu={(event) => openContextMenu(event, { kind: "list" })}
+      >
         <header>
           <h2>Notes</h2>
           <button type="button" className="btn-secondary" onClick={handleCreateFolder} disabled={!selectedFolderId}>
@@ -142,11 +212,10 @@ export const NotesPage = () => {
                 setSelectedFolderId(folder.id);
               }}
               onDoubleClick={() => handleRenameFolder(folder.id)}
+              onContextMenu={(event) => openContextMenu(event, { kind: "folder", id: folder.id })}
             >
               <span>{folder.nom}</span>
-              {folder.id !== rootFolderId && (
-                <small>{Object.values(notes.notes).filter((note) => note.dossierId === folder.id).length}</small>
-              )}
+              <small>{noteCountByFolder[folder.id] ?? 0}</small>
             </button>
           ))}
         </nav>
@@ -170,6 +239,7 @@ export const NotesPage = () => {
                     type="button"
                     className={note.id === selectedNoteId ? "notes-page__item notes-page__item--active" : "notes-page__item"}
                     onClick={() => setSelectedNoteId(note.id)}
+                    onContextMenu={(event) => openContextMenu(event, { kind: "note", id: note.id })}
                   >
                     <div>
                       <strong>{note.titre}</strong>
@@ -192,6 +262,7 @@ export const NotesPage = () => {
             <header>
               <input
                 className="notes-editor__title"
+                ref={titleInputRef}
                 value={currentNote.titre}
                 onChange={(event) => updateNote(currentNote.id, currentNote.contenu, event.target.value)}
               />
@@ -220,6 +291,75 @@ export const NotesPage = () => {
           </div>
         )}
       </section>
+
+      {contextMenu.visible && (
+        <FloatingContextMenu state={contextMenu} setState={setContextMenuState}>
+          {/* Correctif : menu contextuel en portail pour coller exactement au clic sur dossiers/notes. */}
+          {contextMenu.payload?.kind === "folder" && (
+            <>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedFolderId(contextMenu.payload.id);
+                    closeContextMenu();
+                  }}
+                >
+                  Ouvrir
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => handleCreateNoteInFolder(contextMenu.payload!.id)}>
+                  Nouvelle note
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => handleCreateFolderFromTarget(contextMenu.payload!.id)}>
+                  Nouveau sous-dossier
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => handleRenameFolder(contextMenu.payload!.id)}>
+                  Renommer
+                </button>
+              </li>
+            </>
+          )}
+          {contextMenu.payload?.kind === "note" && (
+            <>
+              <li>
+                <button type="button" onClick={() => handleOpenNoteFromMenu(contextMenu.payload!.id)}>
+                  Ouvrir
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => handleOpenNoteFromMenu(contextMenu.payload!.id, true)}>
+                  Renommer
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={() => handleDeleteNoteById(contextMenu.payload!.id)}>
+                  Supprimer
+                </button>
+              </li>
+            </>
+          )}
+          {contextMenu.payload?.kind === "list" && (
+            <>
+              <li>
+                <button type="button" onClick={handleCreateFolder}>
+                  Nouveau dossier
+                </button>
+              </li>
+              <li>
+                <button type="button" onClick={handleCreateNote}>
+                  Nouvelle note
+                </button>
+              </li>
+            </>
+          )}
+        </FloatingContextMenu>
+      )}
 
       {/* Mise à jour : modales internes pour dossiers et notes */}
       <ActionDialog

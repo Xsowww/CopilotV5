@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -13,6 +13,7 @@ interface ProfileFormState {
   avatarUrl: string;
   bio?: string;
   statut?: string;
+  notificationsActives: boolean;
 }
 
 const isDomReady = typeof document !== "undefined";
@@ -29,10 +30,49 @@ export const TopBar = () => {
     avatarUrl: profile.avatarUrl,
     bio: profile.bio,
     statut: profile.statut,
+    notificationsActives: profile.notificationsActives,
   });
   const notificationsRef = useRef<HTMLDivElement | null>(null);
+  // Ajout : suivi des notifications non lues pour piloter pastille et alerte sonore.
+  const knownNotificationsRef = useRef<Set<string>>(new Set());
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const [unreadKeys, setUnreadKeys] = useState<Set<string>>(new Set<string>());
   const navigate = useNavigate();
   const avatarSrc = profile.avatarUrl?.trim() ? profile.avatarUrl : "/vite.svg";
+
+  const playNotificationSound = useCallback(() => {
+    if (!profile.notificationsActives) {
+      return;
+    }
+    try {
+      const AudioCtor =
+        window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtor) {
+        return;
+      }
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioCtor();
+      }
+      const context = audioContextRef.current;
+      if (context.state === "suspended") {
+        void context.resume();
+      }
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.value = 880;
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      const now = context.currentTime;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(0.22, now + 0.03);
+      oscillator.start(now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+      oscillator.stop(now + 0.5);
+    } catch (error) {
+      // Ignorer silencieusement si l'API Audio n'est pas disponible.
+    }
+  }, [profile.notificationsActives]);
 
   const notifications = useMemo(() => {
     const items = [
@@ -62,6 +102,7 @@ export const TopBar = () => {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 6);
   }, [organisation]);
+  const hasUnread = profile.notificationsActives && unreadKeys.size > 0;
 
   useEffect(() => {
     setForm({
@@ -70,8 +111,45 @@ export const TopBar = () => {
       avatarUrl: profile.avatarUrl,
       bio: profile.bio,
       statut: profile.statut,
+      notificationsActives: profile.notificationsActives,
     });
   }, [profile]);
+
+  useEffect(() => {
+    // Ajout : détection des nouvelles notifications pour la pastille et le son.
+    const currentKeys = new Set(notifications.map((item) => `${item.type}-${item.id}`));
+    const previousKeys = knownNotificationsRef.current;
+    const newKeys: string[] = [];
+    currentKeys.forEach((key) => {
+      if (!previousKeys.has(key)) {
+        newKeys.push(key);
+      }
+    });
+    knownNotificationsRef.current = currentKeys;
+    setUnreadKeys((prev) => {
+      const next = new Set(prev);
+      newKeys.forEach((key) => {
+        if (profile.notificationsActives) {
+          next.add(key);
+        }
+      });
+      [...next].forEach((key) => {
+        if (!currentKeys.has(key)) {
+          next.delete(key);
+        }
+      });
+      return next;
+    });
+    if (profile.notificationsActives && newKeys.length > 0) {
+      playNotificationSound();
+    }
+  }, [notifications, profile.notificationsActives, playNotificationSound]);
+
+  useEffect(() => {
+    if (!profile.notificationsActives) {
+      setUnreadKeys(new Set<string>());
+    }
+  }, [profile.notificationsActives]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -92,6 +170,12 @@ export const TopBar = () => {
       window.removeEventListener("click", handleClick);
       window.removeEventListener("keydown", handleKey);
     };
+  }, [isNotificationsOpen]);
+
+  useEffect(() => {
+    if (isNotificationsOpen) {
+      setUnreadKeys(new Set<string>());
+    }
   }, [isNotificationsOpen]);
 
   useEffect(() => {
@@ -176,6 +260,14 @@ export const TopBar = () => {
                 rows={3}
               />
             </label>
+            <label className="profile-dialog__toggle">
+              <input
+                type="checkbox"
+                checked={form.notificationsActives}
+                onChange={(event) => handleChange("notificationsActives", event.target.checked)}
+              />
+              Notifications sonores et pastille
+            </label>
             <div className="profile-dialog__actions">
               <button type="button" className="btn-secondary" onClick={() => setIsProfileOpen(false)}>
                 Annuler
@@ -218,6 +310,7 @@ export const TopBar = () => {
             type="button"
             className={`topbar__action ${isNotificationsOpen ? "topbar__action--active" : ""}`.trim()}
             aria-label="Notifications"
+            data-unread={hasUnread ? "true" : "false"}
             onClick={() => {
               setIsNotificationsOpen((prev) => !prev);
               setIsProfileOpen(false);
@@ -251,6 +344,7 @@ export const TopBar = () => {
                           onClick={() => {
                             // Modification : accès direct depuis le panneau de notifications.
                             setIsNotificationsOpen(false);
+                            setUnreadKeys(new Set<string>());
                             navigate("/organisation", {
                               state: { focusOrganisation: { type: item.type, id: item.id } },
                             });

@@ -89,6 +89,8 @@ const createDefaultProfile = (user: User): UserProfile => ({
     (typeof user.user_metadata?.avatar_url === "string"
       ? (user.user_metadata.avatar_url as string)
       : ""),
+  // Ajout : notifications activées par défaut tant que l'utilisateur ne modifie pas la préférence dans son profil.
+  notificationsActives: true,
 });
 
 interface NotesState {

@@ -95,6 +95,10 @@ export interface UserProfile {
   avatarUrl: string;
   bio?: string;
   statut?: string;
+  /**
+   * Indicateur de préférences de notifications (ajout suite aux retours sur le profil utilisateur).
+   */
+  notificationsActives: boolean;
 }
 
 export type WidgetId = "drive" | "notes" | "organisation" | "activite";

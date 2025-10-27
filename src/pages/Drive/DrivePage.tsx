@@ -8,23 +8,11 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppData } from "../../context/AppDataContext";
 import { ActionDialog } from "../../components/common/ActionDialog";
+import { FloatingContextMenu } from "../../components/common/FloatingContextMenu";
 import { DrivePreview } from "../../components/drive/DrivePreview";
 import type { DriveFileNode, DriveFolderNode, DriveNode } from "../../types";
 import { formatRelativeDate, formatWeight } from "../../utils/formatters";
-
-interface ContextMenuState {
-  visible: boolean;
-  x: number;
-  y: number;
-  targetId: string | null;
-}
-
-const initialMenuState: ContextMenuState = {
-  visible: false,
-  x: 0,
-  y: 0,
-  targetId: null,
-};
+import { useContextMenu } from "../../hooks/useContextMenu";
 
 const isFolder = (node: DriveNode | undefined): node is DriveFolderNode =>
   Boolean(node && node.type === "dossier");
@@ -53,7 +41,6 @@ export const DrivePage = () => {
   } = useAppData();
 
   const [currentFolderId, setCurrentFolderId] = useState(drive.rootId);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>(initialMenuState);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [dialog, setDialog] = useState<DriveDialogState>({ open: false });
   const [dialogValue, setDialogValue] = useState("");
@@ -61,21 +48,13 @@ export const DrivePage = () => {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleClick = () => setContextMenu(initialMenuState);
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setContextMenu(initialMenuState);
-      }
-    };
-    window.addEventListener("click", handleClick);
-    window.addEventListener("keydown", handleKey);
-    return () => {
-      window.removeEventListener("click", handleClick);
-      window.removeEventListener("keydown", handleKey);
-    };
-  }, []);
+  const {
+    state: contextMenu,
+    open: openContextMenu,
+    close: closeContextMenu,
+    setState: setContextMenuState,
+  } = useContextMenu<{ targetId: string | null }>();
+  // Ajout : menu contextuel harmonisé pour aligner précisément l'ouverture sur le curseur.
 
   useEffect(() => {
     const state = location.state as { focusDriveId?: string; focusDriveType?: DriveNode["type"] } | null;
@@ -150,7 +129,7 @@ export const DrivePage = () => {
 
   const showDialog = (state: DriveDialogState) => {
     setDialog(state);
-    setContextMenu(initialMenuState);
+    closeContextMenu();
   };
 
   const closeDialog = () => {
@@ -215,42 +194,17 @@ export const DrivePage = () => {
 
   const handleCopy = (nodeId: string) => {
     copyDriveNode(nodeId);
-    setContextMenu(initialMenuState);
+    closeContextMenu();
   };
 
   const handleCut = (nodeId: string) => {
     cutDriveNode(nodeId);
-    setContextMenu(initialMenuState);
+    closeContextMenu();
   };
 
   const handlePaste = (targetId: string) => {
     pasteClipboard(targetId);
-    setContextMenu(initialMenuState);
-  };
-
-  const openContextMenu = (event: React.MouseEvent, nodeId: string | null) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const padding = 12;
-    const estimatedWidth = 220;
-    const estimatedHeight = 260;
-    let nextX = event.clientX;
-    let nextY = event.clientY;
-    if (nextX + estimatedWidth > window.innerWidth - padding) {
-      nextX = window.innerWidth - estimatedWidth - padding;
-    }
-    if (nextY + estimatedHeight > window.innerHeight - padding) {
-      nextY = window.innerHeight - estimatedHeight - padding;
-    }
-    // Modification : ancrer le menu contextuel exactement sous le curseur tout en évitant le débordement.
-    const clampedX = Math.max(padding, nextX);
-    const clampedY = Math.max(padding, nextY);
-    setContextMenu({
-      visible: true,
-      x: clampedX,
-      y: clampedY,
-      targetId: nodeId,
-    });
+    closeContextMenu();
   };
 
   const handleUploadFiles = (files: FileList | null) => {
@@ -277,7 +231,10 @@ export const DrivePage = () => {
   }, [dialog, getDescendantIds]);
 
   return (
-    <div className="drive-page" onContextMenu={(event) => openContextMenu(event, null)}>
+    <div
+      className="drive-page"
+      onContextMenu={(event) => openContextMenu(event, { targetId: null })}
+    >
       <header className="drive-page__header">
         <div>
           <h2>Drive</h2>
@@ -351,7 +308,7 @@ export const DrivePage = () => {
                 className="drive-table__row"
                 role="row"
                 onDoubleClick={() => handleOpenNode(item)}
-                onContextMenu={(event) => openContextMenu(event, item.id)}
+                onContextMenu={(event) => openContextMenu(event, { targetId: item.id })}
                 onClick={() => item.type === "dossier" && handleOpenNode(item)}
               >
                 <span>{item.nom}</span>
@@ -371,76 +328,75 @@ export const DrivePage = () => {
       </div>
 
       {contextMenu.visible && (
-        <ul
-          className="context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          role="menu"
-        >
-          {contextMenu.targetId && (
+        <FloatingContextMenu state={contextMenu} setState={setContextMenuState}>
+          {/* Correctif : le menu contextuel du Drive suit désormais précisément la position du clic. */}
+          {contextMenu.payload?.targetId && (
             <>
               <li>
                 <button
                   type="button"
                   onClick={() => {
-                    const node = contextMenu.targetId ? drive.nodes[contextMenu.targetId] : null;
+                    const node = contextMenu.payload?.targetId
+                      ? drive.nodes[contextMenu.payload.targetId]
+                      : null;
                     if (node) {
                       handleOpenNode(node);
                     }
-                    setContextMenu(initialMenuState);
+                    closeContextMenu();
                   }}
                 >
                   Ouvrir
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => handleRename(contextMenu.targetId!)}>
+                <button type="button" onClick={() => handleRename(contextMenu.payload!.targetId!)}>
                   Renommer
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => handleMove(contextMenu.targetId!)}>
+                <button type="button" onClick={() => handleMove(contextMenu.payload!.targetId!)}>
                   Déplacer…
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => handleCopy(contextMenu.targetId!)}>
+                <button type="button" onClick={() => handleCopy(contextMenu.payload!.targetId!)}>
                   Copier
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => handleCut(contextMenu.targetId!)}>
+                <button type="button" onClick={() => handleCut(contextMenu.payload!.targetId!)}>
                   Couper
                 </button>
               </li>
               {clipboard.elementId && (
                 <li>
-                  <button type="button" onClick={() => handlePaste(contextMenu.targetId!)}>
+                  <button type="button" onClick={() => handlePaste(contextMenu.payload!.targetId!)}>
                     Coller ici
                   </button>
                 </li>
               )}
               <li>
-                <button type="button" onClick={() => handleDelete(contextMenu.targetId!)}>
+                <button type="button" onClick={() => handleDelete(contextMenu.payload!.targetId!)}>
                   Supprimer
                 </button>
               </li>
             </>
           )}
-          {!contextMenu.targetId && clipboard.elementId && (
+          {!contextMenu.payload?.targetId && clipboard.elementId && (
             <li>
               <button type="button" onClick={() => handlePaste(currentFolderId)}>
                 Coller dans {currentFolder.nom}
               </button>
             </li>
           )}
-          {!contextMenu.targetId && (
+          {!contextMenu.payload?.targetId && (
             <li>
               <button type="button" onClick={handleCreateFolder}>
                 Nouveau dossier
               </button>
             </li>
           )}
-        </ul>
+        </FloatingContextMenu>
       )}
 
       {/* Mise à jour : flux de gestion des dossiers via une modale cohérente */}

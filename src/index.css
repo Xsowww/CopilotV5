@@ -261,6 +261,7 @@ label {
   border: 1px solid var(--border);
   display: grid;
   place-items: center;
+  position: relative;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -268,6 +269,18 @@ label {
 .topbar__action:hover {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(90, 162, 255, 0.28);
+}
+
+.topbar__action[data-unread="true"]::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--warning);
+  box-shadow: 0 0 6px rgba(255, 118, 118, 0.6);
 }
 
 /* Modification : panneau de notifications aligné sur le topbar. */
@@ -426,6 +439,20 @@ label {
   gap: 18px;
 }
 
+.profile-dialog__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.profile-dialog__toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
 .profile-dialog__actions {
   display: flex;
   justify-content: flex-end;
@@ -562,7 +589,7 @@ label {
   flex-direction: column;
   gap: 12px;
   flex: 1;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .widget-list {
@@ -607,10 +634,9 @@ label {
 .widget-list__title {
   font-weight: 600;
   font-size: 0.95rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: clamp(120px, 60%, 220px);
+  line-height: 1.25;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .widget-list__main {
@@ -625,10 +651,8 @@ label {
 .widget-list__meta {
   color: var(--text-tertiary);
   font-size: 0.7rem;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
 
 .widget-list__tags {
@@ -727,17 +751,15 @@ label {
 .organisation-widget__title {
   font-size: 0.9rem;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .organisation-widget__meta {
   font-size: 0.8rem;
   color: var(--text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .organisation-widget__flag {
@@ -862,9 +884,9 @@ label {
   position: absolute;
   inset: -6px;
   border-radius: calc(var(--radius-md) + 6px);
-  border: 1px solid rgba(90, 162, 255, 0.45);
-  background: rgba(90, 162, 255, 0.08);
-  box-shadow: 0 0 0 4px rgba(90, 162, 255, 0.08);
+  border: 1px solid rgba(120, 170, 255, 0.28);
+  background: linear-gradient(135deg, rgba(90, 162, 255, 0.16), rgba(90, 162, 255, 0.05));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 8px 20px rgba(12, 24, 68, 0.35);
   pointer-events: none;
   z-index: 0;
 }
@@ -1010,13 +1032,13 @@ label {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-strong);
-  max-width: min(1100px, 96vw);
+  max-width: min(1280px, 96vw);
   width: 100%;
-  height: min(90vh, 900px);
+  height: min(92vh, 960px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 28px;
+  gap: 18px;
+  padding: 32px;
   color: var(--text-primary);
   backdrop-filter: blur(var(--glass-blur));
 }
@@ -1035,10 +1057,10 @@ label {
 
 .drive-preview__content {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: rgba(8, 22, 60, 0.75);
+  background: rgba(8, 22, 60, 0.78);
   display: flex;
   align-items: stretch;
 }
@@ -1053,7 +1075,7 @@ label {
 .drive-preview__iframe {
   width: 100%;
   height: 100%;
-  min-height: clamp(320px, 70vh, 720px);
+  min-height: clamp(520px, 85vh, 880px);
   border: none;
   border-radius: var(--radius-sm);
 }
@@ -1332,15 +1354,25 @@ label {
 .calendar-month__event {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
   background: rgba(90, 162, 255, 0.16);
+  border: 1px solid transparent;
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 2px 10px;
   font-size: 0.68rem;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.calendar-month__event:hover,
+.calendar-month__event:focus-visible {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(90, 162, 255, 0.22);
+  outline: none;
 }
 
 .calendar-month__more {
@@ -1481,40 +1513,117 @@ label {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
-.organisation-sidebar__list button {
+.organisation-sidebar__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.07);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.organisation-sidebar__item:hover {
+  border-color: var(--accent);
+  background: rgba(90, 162, 255, 0.14);
+}
+
+.organisation-sidebar__item-button {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
   width: 100%;
-  text-align: left;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-primary);
-  transition: background 0.2s ease, border-color 0.2s ease;
-}
-
-.organisation-sidebar__list button:hover,
-.organisation-sidebar__list button[aria-current="true"] {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: var(--accent);
-}
-
-.organisation-sidebar__delete {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  padding: 0;
+  border: none;
   background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.organisation-sidebar__item-button div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.organisation-sidebar__item-button strong {
+  display: block;
+  line-height: 1.2;
+}
+
+.organisation-sidebar__item-button span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  word-break: break-word;
+}
+
+.organisation-sidebar__item-button--simple {
+  align-items: center;
+}
+
+.organisation-sidebar__time {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.organisation-sidebar__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.organisation-sidebar__actions--single {
+  justify-content: flex-end;
+}
+
+.organisation-sidebar__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.organisation-sidebar__action:hover {
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.organisation-sidebar__action--danger {
+  background: rgba(255, 105, 105, 0.18);
+  color: var(--warning);
+}
+
+.organisation-sidebar__action--danger:hover {
+  background: rgba(255, 105, 105, 0.28);
+  color: #ffb5b5;
+}
+
+.organisation-sidebar__item--completed .organisation-sidebar__item-button strong {
+  text-decoration: line-through;
   color: var(--text-tertiary);
 }
 
-.organisation-sidebar__delete:hover {
+.organisation-sidebar__scheduled {
+  font-size: 0.7rem;
   color: var(--warning);
+  margin: 0;
 }
 
 .organisation-editor {

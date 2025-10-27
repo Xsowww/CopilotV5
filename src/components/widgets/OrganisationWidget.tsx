@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { MdOutlineCalendarMonth } from "react-icons/md";
 import { WidgetCard } from "../common/WidgetCard";
-import { formatCalendarDate, truncateText } from "../../utils/formatters";
+import { formatCalendarDate } from "../../utils/formatters";
 import type { Evenement, Rappel, Tache } from "../../types";
 
 interface OrganisationWidgetProps {
@@ -56,7 +56,7 @@ export const OrganisationWidget = ({
           <span>{date.mois}</span>
         </div>
         <div className="organisation-widget__details">
-          <p className="organisation-widget__title">{truncateText(prochainEvenement.titre, 18)}</p>
+          <p className="organisation-widget__title">{prochainEvenement.titre}</p>
           <span className="organisation-widget__meta">
             {(date.heure ?? "Toute la journée")} · Priorité {prochainEvenement.priorite ?? "normale"}
           </span>
@@ -84,7 +84,7 @@ export const OrganisationWidget = ({
           {prochaineTache.priorite}
         </div>
         <div className="organisation-widget__details">
-          <p className="organisation-widget__title">{truncateText(prochaineTache.titre, 18)}</p>
+          <p className="organisation-widget__title">{prochaineTache.titre}</p>
           <span className="organisation-widget__meta">
             Statut : {prochaineTache.statut.replace(/_/g, " ")} · Échéance {echeance.jour} {echeance.mois}
           </span>
@@ -98,7 +98,6 @@ export const OrganisationWidget = ({
       return <p className="widget-card__empty">Aucun rappel planifié.</p>;
     }
     const date = formatCalendarDate(prochainRappel.date);
-    const titre = truncateText(prochainRappel.titre, 7);
     return (
       <button
         type="button"
@@ -113,8 +112,7 @@ export const OrganisationWidget = ({
           <span>{date.mois}</span>
         </div>
         <div className="organisation-widget__details">
-          {/* Mise à jour : rappel tronqué pour rester lisible dans le widget compact. */}
-          <p className="organisation-widget__title">{titre}</p>
+          <p className="organisation-widget__title">{prochainRappel.titre}</p>
           <span className="organisation-widget__meta">{prochainRappel.description ?? "Pas de description"}</span>
         </div>
       </button>
