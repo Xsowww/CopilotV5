@@ -104,6 +104,14 @@ export interface UserProfile {
    * Indicateur de préférences de notifications (ajout suite aux retours sur le profil utilisateur).
    */
   notificationsActives: boolean;
+  /**
+   * Nouvelle préférence : mode concentration pour réduire les alertes visuelles.
+   */
+  modeConcentration?: boolean;
+  /**
+   * Nouvelle préférence : partage des activités récentes sur le tableau de bord.
+   */
+  partageActivite?: boolean;
 }
 
 export type WidgetId = "drive" | "notes" | "organisation" | "activite";

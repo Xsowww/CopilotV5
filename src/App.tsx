@@ -7,6 +7,7 @@ import { DrivePage } from "./pages/Drive/DrivePage";
 import { NotesPage } from "./pages/Notes/NotesPage";
 import { OrganisationPage } from "./pages/Organisation/OrganisationPage";
 import { AuthPage } from "./pages/Auth/AuthPage";
+import { ProfilePage } from "./pages/Profile/ProfilePage";
 
 const App = () => {
   const { user, loading, isSupabaseConfigured } = useAuth();
@@ -31,6 +32,7 @@ const App = () => {
           <Route path="/drive" element={<DrivePage />} />
           <Route path="/organisation" element={<OrganisationPage />} />
           <Route path="/notes" element={<NotesPage />} />
+          <Route path="/profil" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </DashboardLayout>

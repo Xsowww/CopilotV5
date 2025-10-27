@@ -22,7 +22,7 @@
   --radius-md: 20px;
   --radius-sm: 14px;
   --glass-blur: 22px;
-  --dashboard-widget-height: 240px;
+  --dashboard-widget-height: 268px; /* Ajustement : widgets légèrement plus hauts pour accueillir les listes récentes. */
   font-family: "SF Pro Display", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -561,6 +561,16 @@ label {
   color: var(--text-primary);
 }
 
+.btn-danger {
+  background: linear-gradient(135deg, rgba(255, 118, 140, 0.95), rgba(214, 64, 92, 0.9));
+  color: #2a030b;
+  box-shadow: 0 16px 32px -18px rgba(214, 64, 92, 0.75);
+}
+
+.btn-danger:hover {
+  transform: translateY(-1px);
+}
+
 .btn-tertiary {
   background: transparent;
   color: var(--text-secondary);
@@ -640,7 +650,7 @@ label {
 .widget-card__content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   flex: 1;
   min-height: 0;
   overflow: hidden; /* Correctif : maintien les contenus internes dans la hauteur fixe des widgets. */
@@ -660,7 +670,7 @@ label {
 .widget-list li {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   font-size: 0.9rem;
   min-width: 0;
@@ -693,11 +703,11 @@ label {
 .widget-list__title {
   font-weight: 600;
   font-size: 0.95rem;
-  line-height: 1.25;
+  line-height: 1.3;
   white-space: normal;
   word-break: break-word;
   display: -webkit-box;
-  -webkit-line-clamp: 3; /* Correctif : limite l'aperçu sans laisser déborder le texte. */
+  -webkit-line-clamp: 4; /* Ajustement : plus de lignes visibles tout en restant contenus. */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -713,9 +723,10 @@ label {
 /* Ajustement : métadonnées tronquées pour rester dans le cadre des cartes. */
 .widget-list__meta {
   color: var(--text-tertiary);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   white-space: normal;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .widget-list__tags {
@@ -1041,22 +1052,22 @@ label {
 
 .drive-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 18px;
 }
 
 .drive-grid__item {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  align-items: center;
+  gap: 10px;
+  align-items: flex-start;
   justify-content: flex-start;
-  padding: 18px 16px;
+  padding: 14px 12px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
-  text-align: center;
+  text-align: left;
   cursor: pointer;
 }
 
@@ -1070,12 +1081,12 @@ label {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 60px;
-  height: 60px;
-  border-radius: 18px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
-  box-shadow: inset 0 -6px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.18);
 }
 
 .drive-grid__icon[data-type="dossier"] {
@@ -1106,6 +1117,160 @@ label {
 .drive-grid__meta {
   font-size: 0.78rem;
   color: var(--text-secondary);
+}
+
+/* Nouvelle feuille : profil plein écran inspiré des préférences iCloud. */
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+  min-height: 100%;
+}
+
+.profile-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(160deg, rgba(32, 70, 160, 0.42), rgba(12, 32, 86, 0.58));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.profile-page__identity {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.profile-page__avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-page__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-page__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-page__form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px 28px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.profile-section h3 {
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.profile-section__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 24px;
+}
+
+.profile-section__grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.profile-section__grid input,
+.profile-section__grid textarea {
+  width: 100%;
+}
+
+.profile-section__full {
+  grid-column: 1 / -1;
+}
+
+.profile-section__toggles {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+.profile-section--danger {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 110, 128, 0.08);
+  border-color: rgba(255, 110, 128, 0.28);
+}
+
+.profile-section--danger h3 {
+  color: #ff92a5;
+}
+
+.profile-section--danger p {
+  color: rgba(255, 196, 206, 0.82);
+}
+
+@media (max-width: 1024px) {
+  .profile-page__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .profile-page__actions {
+    align-self: stretch;
+    justify-content: flex-end;
+  }
+
+  .profile-section__grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .drive-grid__empty {
@@ -1147,19 +1312,19 @@ label {
 
 .notification-toast {
   position: fixed;
-  top: clamp(24px, 6vh, 80px);
+  top: 8px;
   left: 50%;
   transform: translate(-50%, 0);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 16px 20px;
+  gap: 8px;
+  padding: 18px 28px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(8, 22, 60, 0.9);
-  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: linear-gradient(160deg, rgba(12, 32, 88, 0.95), rgba(24, 60, 140, 0.92));
+  box-shadow: 0 16px 46px -18px rgba(3, 13, 42, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.22);
   color: var(--text-primary);
-  z-index: 160;
+  z-index: 200;
   animation: toast-pop 240ms ease-out;
 }
 
@@ -1183,7 +1348,7 @@ label {
 }
 
 .notification-toast strong {
-  font-size: 0.95rem;
+  font-size: 1.05rem;
   font-weight: 600;
 }
 

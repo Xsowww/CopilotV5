@@ -92,6 +92,8 @@ const createDefaultProfile = (user: User): UserProfile => ({
       : ""),
   // Ajout : notifications activées par défaut tant que l'utilisateur ne modifie pas la préférence dans son profil.
   notificationsActives: true,
+  modeConcentration: false,
+  partageActivite: true,
 });
 
 interface NotesState {

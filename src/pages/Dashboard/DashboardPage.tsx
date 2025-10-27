@@ -117,12 +117,12 @@ const resolveOverContainer = (
 
 export const DashboardPage = () => {
   const navigate = useNavigate();
-  const { drive, notes, organisation, activities, widgetLayout, saveWidgetLayout } = useAppData();
+  const { drive, notes, organisation, activities, widgetLayout, saveWidgetLayout, profile } = useAppData();
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [localLayout, setLocalLayout] = useState<WidgetLayout>(() => cloneLayout(widgetLayout));
   const [hasChanges, setHasChanges] = useState(false);
-  // Mise à jour : limiter chaque widget à un seul élément pour éviter tout débordement visuel.
-  const MAX_WIDGET_ITEMS = 1;
+  // Mise à jour : conserver jusqu'à deux éléments par widget tout en supprimant automatiquement les plus anciens.
+  const MAX_WIDGET_ITEMS = 2;
 
   useEffect(() => {
     if (!isCustomizing) {
@@ -242,7 +242,12 @@ export const DashboardPage = () => {
       .slice(0, MAX_WIDGET_ITEMS); // Modification : limiter l'aperçu pour conserver des widgets compacts.
   }, [notes.notes]);
 
-  const activityHighlights = useMemo(() => activities.slice(0, MAX_WIDGET_ITEMS), [activities]);
+  const activityHighlights = useMemo(() => {
+    if (profile.partageActivite === false) {
+      return [];
+    }
+    return activities.slice(0, MAX_WIDGET_ITEMS);
+  }, [activities, profile.partageActivite]);
 
   const handleWidgetOpen = (widgetId: WidgetId) => {
     if (isCustomizing) return;
