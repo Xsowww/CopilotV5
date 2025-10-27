@@ -234,8 +234,17 @@ export const DrivePage = () => {
     const padding = 12;
     const estimatedWidth = 220;
     const estimatedHeight = 260;
-    const clampedX = Math.max(padding, Math.min(event.clientX, window.innerWidth - estimatedWidth));
-    const clampedY = Math.max(padding, Math.min(event.clientY, window.innerHeight - estimatedHeight));
+    let nextX = event.clientX;
+    let nextY = event.clientY;
+    if (nextX + estimatedWidth > window.innerWidth - padding) {
+      nextX = window.innerWidth - estimatedWidth - padding;
+    }
+    if (nextY + estimatedHeight > window.innerHeight - padding) {
+      nextY = window.innerHeight - estimatedHeight - padding;
+    }
+    // Modification : ancrer le menu contextuel exactement sous le curseur tout en évitant le débordement.
+    const clampedX = Math.max(padding, nextX);
+    const clampedY = Math.max(padding, nextY);
     setContextMenu({
       visible: true,
       x: clampedX,

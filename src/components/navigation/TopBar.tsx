@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { PiBellSimpleFill, PiCloudFill } from "react-icons/pi";
@@ -14,11 +15,13 @@ interface ProfileFormState {
   statut?: string;
 }
 
+const isDomReady = typeof document !== "undefined";
+
 export const TopBar = () => {
   const date = format(new Date(), "EEEE d MMMM yyyy", { locale: fr });
   const { profile, updateProfile, organisation, isSyncing } = useAppData();
   const { signOut } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [form, setForm] = useState<ProfileFormState>({
     nom: profile.nom,
@@ -27,7 +30,6 @@ export const TopBar = () => {
     bio: profile.bio,
     statut: profile.statut,
   });
-  const menuRef = useRef<HTMLDivElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
   const avatarSrc = profile.avatarUrl?.trim() ? profile.avatarUrl : "/vite.svg";
@@ -73,18 +75,6 @@ export const TopBar = () => {
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-    if (isMenuOpen) {
-      window.addEventListener("click", handleClick);
-    }
-    return () => window.removeEventListener("click", handleClick);
-  }, [isMenuOpen]);
-
-  useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
       if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
         setIsNotificationsOpen(false);
       }
@@ -104,6 +94,17 @@ export const TopBar = () => {
     };
   }, [isNotificationsOpen]);
 
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsProfileOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isProfileOpen]);
+
   const handleChange = <Key extends keyof ProfileFormState>(key: Key, value: ProfileFormState[Key]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
@@ -111,7 +112,93 @@ export const TopBar = () => {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     updateProfile(form);
-    setIsMenuOpen(false);
+    setIsProfileOpen(false);
+  };
+
+  const renderProfileDialog = () => {
+    if (!isProfileOpen || !isDomReady) {
+      return null;
+    }
+    // Modification : transformation du profil en fenêtre modale cohérente avec le design global.
+    return createPortal(
+      <div
+        className="dialog-overlay profile-dialog__overlay"
+        role="presentation"
+        onClick={() => setIsProfileOpen(false)}
+      >
+        <div
+          className="profile-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Profil utilisateur"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <h3>Profil utilisateur</h3>
+          <form onSubmit={handleSubmit}>
+            <label>
+              Nom complet
+              <input
+                type="text"
+                value={form.nom}
+                onChange={(event) => handleChange("nom", event.target.value)}
+              />
+            </label>
+            <label>
+              Adresse e-mail
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => handleChange("email", event.target.value)}
+              />
+            </label>
+            <label>
+              Lien de la photo
+              <input
+                type="url"
+                value={form.avatarUrl}
+                onChange={(event) => handleChange("avatarUrl", event.target.value)}
+              />
+            </label>
+            <label>
+              Statut
+              <input
+                type="text"
+                value={form.statut ?? ""}
+                placeholder="Disponible, En réunion…"
+                onChange={(event) => handleChange("statut", event.target.value)}
+              />
+            </label>
+            <label>
+              Bio
+              <textarea
+                value={form.bio ?? ""}
+                onChange={(event) => handleChange("bio", event.target.value)}
+                rows={3}
+              />
+            </label>
+            <div className="profile-dialog__actions">
+              <button type="button" className="btn-secondary" onClick={() => setIsProfileOpen(false)}>
+                Annuler
+              </button>
+              <button type="submit" className="btn-primary">
+                Enregistrer
+              </button>
+            </div>
+          </form>
+          <button
+            type="button"
+            className="profile-dialog__signout"
+            onClick={() => {
+              setIsProfileOpen(false);
+              void signOut();
+            }}
+          >
+            Se déconnecter
+          </button>
+        </div>
+      </div>,
+      document.body
+    );
   };
 
   return (
@@ -133,7 +220,7 @@ export const TopBar = () => {
             aria-label="Notifications"
             onClick={() => {
               setIsNotificationsOpen((prev) => !prev);
-              setIsMenuOpen(false);
+              setIsProfileOpen(false);
             }}
           >
             <PiBellSimpleFill size={18} />
@@ -186,83 +273,21 @@ export const TopBar = () => {
             </div>
           )}
         </div>
-        <div className="topbar__profile" ref={menuRef}>
+        <div className="topbar__profile">
           <button
             type="button"
             className="topbar__avatar"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
+            onClick={() => {
+              setIsProfileOpen((prev) => !prev);
+              setIsNotificationsOpen(false);
+            }}
             aria-haspopup="dialog"
-            aria-expanded={isMenuOpen}
+            aria-expanded={isProfileOpen}
           >
             <img src={avatarSrc} alt={`Avatar de ${profile.nom}`} />
             <span className="topbar__status" aria-hidden="true" />
           </button>
-          {isMenuOpen && (
-            <div className="profile-menu" role="dialog" aria-label="Profil utilisateur">
-              <h3>Profil utilisateur</h3>
-              <form onSubmit={handleSubmit}>
-                <label>
-                  Nom complet
-                  <input
-                    type="text"
-                    value={form.nom}
-                    onChange={(event) => handleChange("nom", event.target.value)}
-                  />
-                </label>
-                <label>
-                  Adresse e-mail
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => handleChange("email", event.target.value)}
-                  />
-                </label>
-                <label>
-                  Lien de la photo
-                  <input
-                    type="url"
-                    value={form.avatarUrl}
-                    onChange={(event) => handleChange("avatarUrl", event.target.value)}
-                  />
-                </label>
-                <label>
-                  Statut
-                  <input
-                    type="text"
-                    value={form.statut ?? ""}
-                    placeholder="Disponible, En réunion…"
-                    onChange={(event) => handleChange("statut", event.target.value)}
-                  />
-                </label>
-                <label>
-                  Bio
-                  <textarea
-                    value={form.bio ?? ""}
-                    onChange={(event) => handleChange("bio", event.target.value)}
-                    rows={3}
-                  />
-                </label>
-                <div className="profile-menu__actions">
-                  <button type="button" className="btn-secondary" onClick={() => setIsMenuOpen(false)}>
-                    Annuler
-                  </button>
-                  <button type="submit" className="btn-primary">
-                    Enregistrer
-                  </button>
-                </div>
-              </form>
-              <button
-                type="button"
-                className="profile-menu__signout"
-                onClick={() => {
-                  setIsMenuOpen(false);
-                  void signOut();
-                }}
-              >
-                Se déconnecter
-              </button>
-            </div>
-          )}
+          {renderProfileDialog()}
         </div>
       </div>
     </header>
