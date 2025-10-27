@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { DndContext, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, PointerSensor, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import type { DragEndEvent, DragOverEvent } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -53,6 +53,37 @@ const cloneLayout = (layout: WidgetLayout): WidgetLayout => ({
   colonneDroite: [...layout.colonneDroite],
 });
 
+interface SortableColumnProps {
+  column: keyof WidgetLayout;
+  items: WidgetId[];
+  isCustomizing: boolean;
+  renderWidget: (widgetId: WidgetId) => ReactNode;
+}
+
+const SortableColumn = ({ column, items, isCustomizing, renderWidget }: SortableColumnProps) => {
+  const { setNodeRef, isOver } = useDroppable({ id: column });
+  const showPlaceholder = isCustomizing && items.length === 0;
+  return (
+    <SortableContext items={items}>
+      <div
+        ref={setNodeRef}
+        className={`dashboard-grid__column ${isOver ? "dashboard-grid__column--active" : ""}`.trim()}
+        data-column={column}
+      >
+        {items.map((widgetId) => (
+          <SortableWidget key={widgetId} id={widgetId} disabled={!isCustomizing}>
+            <div className={isCustomizing ? "widget-wrapper widget-wrapper--editing" : "widget-wrapper"}>
+              {renderWidget(widgetId)}
+              {isCustomizing && <span className="widget-wrapper__hint">Glisse pour réorganiser</span>}
+            </div>
+          </SortableWidget>
+        ))}
+        {showPlaceholder && <div className="dashboard-grid__placeholder">Dépose ici</div>}
+      </div>
+    </SortableContext>
+  );
+};
+
 // Modification : sécurisation du calcul de conteneur pour éviter le blocage du drag & drop.
 const findContainerForWidget = (layout: WidgetLayout, widgetId: string | WidgetId):
   | keyof WidgetLayout
@@ -72,6 +103,9 @@ const resolveOverContainer = (
 ): keyof WidgetLayout | null => {
   if (!over) return null;
   if (typeof over.id === "string") {
+    if (over.id === "colonneGauche" || over.id === "colonneDroite") {
+      return over.id as keyof WidgetLayout;
+    }
     const directMatch = findContainerForWidget(layout, over.id);
     if (directMatch) {
       return directMatch;
@@ -87,6 +121,8 @@ export const DashboardPage = () => {
   const [isCustomizing, setIsCustomizing] = useState(false);
   const [localLayout, setLocalLayout] = useState<WidgetLayout>(() => cloneLayout(widgetLayout));
   const [hasChanges, setHasChanges] = useState(false);
+  // Modification : limite centrale pour éviter que les listes ne débordent des cartes compactes.
+  const MAX_WIDGET_ITEMS = 3;
 
   useEffect(() => {
     if (!isCustomizing) {
@@ -174,14 +210,16 @@ export const DashboardPage = () => {
     return nodes
       .filter((node) => node.id !== drive.rootId)
       .sort((a, b) => b.misAJourLe.localeCompare(a.misAJourLe))
-      .slice(0, 3); // Modification : limiter l'aperçu pour conserver des widgets compacts.
+      .slice(0, MAX_WIDGET_ITEMS); // Modification : limiter l'aperçu pour conserver des widgets compacts.
   }, [drive]);
 
   const notesList = useMemo<Note[]>(() => {
     return Object.values(notes.notes)
       .sort((a, b) => b.misAJourLe.localeCompare(a.misAJourLe))
-      .slice(0, 3); // Modification : limiter l'aperçu pour conserver des widgets compacts.
+      .slice(0, MAX_WIDGET_ITEMS); // Modification : limiter l'aperçu pour conserver des widgets compacts.
   }, [notes.notes]);
+
+  const activityHighlights = useMemo(() => activities.slice(0, MAX_WIDGET_ITEMS), [activities]);
 
   const handleWidgetOpen = (widgetId: WidgetId) => {
     if (isCustomizing) return;
@@ -265,7 +303,13 @@ export const DashboardPage = () => {
           />
         );
       case "activite":
-        return <ActivityWidget activities={activities} onActivityNavigate={handleActivityNavigate} {...commonProps} />;
+        return (
+          <ActivityWidget
+            activities={activityHighlights}
+            onActivityNavigate={handleActivityNavigate}
+            {...commonProps}
+          />
+        );
       default:
         return null;
     }
@@ -300,18 +344,13 @@ export const DashboardPage = () => {
       <DndContext sensors={sensors} onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
         <div className={`dashboard-grid ${isCustomizing ? "dashboard-grid--editing" : ""}`}>
           {columns.map((column) => (
-            <SortableContext key={column} items={localLayout[column]}>
-              <div className="dashboard-grid__column" data-column={column}>
-                {localLayout[column].map((widgetId) => (
-                  <SortableWidget key={widgetId} id={widgetId} disabled={!isCustomizing}>
-                    <div className={isCustomizing ? "widget-wrapper widget-wrapper--editing" : "widget-wrapper"}>
-                      {renderWidget(widgetId)}
-                      {isCustomizing && <span className="widget-wrapper__hint">Glisse pour réorganiser</span>}
-                    </div>
-                  </SortableWidget>
-                ))}
-              </div>
-            </SortableContext>
+            <SortableColumn
+              key={column}
+              column={column}
+              items={localLayout[column]}
+              isCustomizing={isCustomizing}
+              renderWidget={renderWidget}
+            />
           ))}
         </div>
       </DndContext>

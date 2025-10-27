@@ -88,7 +88,15 @@ export const OrganisationPage = () => {
     if (type === "evenement" && id) {
       const existing = organisation.evenements.find((event) => event.id === id);
       if (existing) {
-        setEditor({ type, data: { ...existing } });
+        // Modification : on applique des valeurs par défaut pour les nouveaux champs d'événement.
+        setEditor({
+          type,
+          data: {
+            ...existing,
+            priorite: existing.priorite ?? "normale",
+            urgent: existing.urgent ?? false,
+          },
+        });
         return;
       }
     }
@@ -113,6 +121,8 @@ export const OrganisationPage = () => {
         date: formatISO(selectedDate),
         heure: "09:00",
         titre: "",
+        priorite: "normale",
+        urgent: false,
       },
     });
   };
@@ -171,7 +181,8 @@ export const OrganisationPage = () => {
           description: payload.description,
           date: payload.date,
           heure: payload.heure,
-          localisation: payload.localisation,
+          priorite: (payload.priorite ?? "normale") as Evenement["priorite"],
+          urgent: Boolean(payload.urgent),
           categorie: payload.categorie,
         });
         break;
@@ -302,10 +313,11 @@ export const OrganisationPage = () => {
                     }`.trim()}
                     onClick={() => setSelectedDate(day)}
                   >
+                    <span className="calendar-month__weekday">{format(day, "EEEE", { locale: fr })}</span>
                     <span className="calendar-month__date">{format(day, "d", { locale: fr })}</span>
                     {dayEvents.slice(0, 3).map((event) => (
                       <span key={event.id} className="calendar-month__event">
-                        {event.titre}
+                        {truncateText(event.titre, 8)}
                       </span>
                     ))}
                     {dayEvents.length > 3 && (
@@ -332,7 +344,7 @@ export const OrganisationPage = () => {
                         className="calendar-week__event"
                         onClick={() => openEditor("evenement", event.id)}
                       >
-                        <strong>{event.titre}</strong>
+                        <strong>{truncateText(event.titre, 8)}</strong>
                         <span>{event.heure ?? "Toute la journée"}</span>
                       </button>
                     ))}
@@ -369,7 +381,7 @@ export const OrganisationPage = () => {
                       onClick={() => openEditor("evenement", event.id)}
                     >
                       <span>{event.heure ?? "Toute la journée"}</span>
-                      <strong>{event.titre}</strong>
+                      <strong>{truncateText(event.titre, 8)}</strong>
                       {event.description && <small>{event.description}</small>}
                     </button>
                   ))
@@ -523,19 +535,37 @@ export const OrganisationPage = () => {
                 />
               </label>
               {editor.type === "evenement" && (
-                <label>
-                  Localisation
-                  <input
-                    type="text"
-                    value={editor.data.localisation ?? ""}
-                    onChange={(event) =>
-                      setEditor({
-                        type: editor.type,
-                        data: { ...editor.data, localisation: event.target.value },
-                      })
-                    }
-                  />
-                </label>
+                <div className="organisation-editor__grid">
+                  <label>
+                    Priorité
+                    <select
+                      value={(editor.data.priorite as Evenement["priorite"]) ?? "normale"}
+                      onChange={(event) =>
+                        setEditor({
+                          type: editor.type,
+                          data: { ...editor.data, priorite: event.target.value as Evenement["priorite"] },
+                        })
+                      }
+                    >
+                      <option value="faible">Faible</option>
+                      <option value="normale">Normale</option>
+                      <option value="haute">Haute</option>
+                    </select>
+                  </label>
+                  <label className="organisation-editor__checkbox organisation-editor__checkbox--inline">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editor.data.urgent)}
+                      onChange={(event) =>
+                        setEditor({
+                          type: editor.type,
+                          data: { ...editor.data, urgent: event.target.checked },
+                        })
+                      }
+                    />
+                    Événement urgent
+                  </label>
+                </div>
               )}
               {editor.type === "tache" && (
                 <div className="organisation-editor__grid">

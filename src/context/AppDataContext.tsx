@@ -67,6 +67,15 @@ const createDefaultOrganisationState = (): OrganisationState => ({
   rappels: [],
 });
 
+const normalizeOrganisationState = (state: OrganisationState): OrganisationState => ({
+  ...state,
+  evenements: state.evenements.map((evenement) => ({
+    ...evenement,
+    priorite: evenement.priorite ?? "normale",
+    urgent: evenement.urgent ?? false,
+  })),
+});
+
 const defaultMessages: ChatMessage[] = [];
 
 const createDefaultProfile = (user: User): UserProfile => ({
@@ -251,7 +260,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     readStorage(STORAGE_KEYS.notes, createDefaultNotesState())
   );
   const [organisation, setOrganisation] = useState<OrganisationState>(() =>
-    readStorage(STORAGE_KEYS.organisation, createDefaultOrganisationState())
+    normalizeOrganisationState(readStorage(STORAGE_KEYS.organisation, createDefaultOrganisationState()))
   );
   const [activities, setActivities] = useState<WidgetActivity[]>(() =>
     readStorage(STORAGE_KEYS.activities, [] as WidgetActivity[])
@@ -310,7 +319,9 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         const driveState = (data.drive as DriveState | null) ?? createDefaultDriveState();
         setDrive(driveState.rootId ? driveState : createDefaultDriveState());
         setNotes((data.notes as NotesState | null) ?? createDefaultNotesState());
-        setOrganisation((data.organisation as OrganisationState | null) ?? createDefaultOrganisationState());
+        const storedOrganisation =
+          (data.organisation as OrganisationState | null) ?? createDefaultOrganisationState();
+        setOrganisation(normalizeOrganisationState(storedOrganisation));
         setActivities((data.activities as WidgetActivity[] | null) ?? []);
         setWidgetLayout((data.widget_layout as WidgetLayout | null) ?? defaultLayout);
         const profileState = (data.profile as UserProfile | null) ?? defaultProfile;
@@ -879,13 +890,18 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
   }, []);
 
   const saveEvenement = useCallback((evenement: Evenement) => {
+    const payload: Evenement = {
+      ...evenement,
+      priorite: evenement.priorite ?? "normale",
+      urgent: evenement.urgent ?? false,
+    };
     setOrganisation((prev) => {
-      const existingIndex = prev.evenements.findIndex((item) => item.id === evenement.id);
+      const existingIndex = prev.evenements.findIndex((item) => item.id === payload.id);
       const evenements = [...prev.evenements];
       if (existingIndex >= 0) {
-        evenements[existingIndex] = evenement;
+        evenements[existingIndex] = payload;
       } else {
-        evenements.push(evenement);
+        evenements.push(payload);
       }
       return { ...prev, evenements };
     });

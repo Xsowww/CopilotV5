@@ -12,6 +12,8 @@ interface NotesWidgetProps {
   onItemNavigate?: (note: Note) => void;
 }
 
+const MAX_WIDGET_ITEMS = 3;
+
 export const NotesWidget = ({
   notes,
   loading,
@@ -20,7 +22,7 @@ export const NotesWidget = ({
   disabled = false,
   onItemNavigate,
 }: NotesWidgetProps) => {
-  const principalesNotes = notes.slice(0, 3); // Modification : limiter l'aperçu pour alléger la hauteur du widget.
+  const principalesNotes = notes.slice(0, MAX_WIDGET_ITEMS); // Modification : limiter l'aperçu pour alléger la hauteur du widget.
 
   return (
     <WidgetCard

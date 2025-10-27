@@ -34,6 +34,7 @@ export const DrivePreview = ({ file, onClose, onSaveDocument }: DrivePreviewProp
             title={`Prévisualisation de ${file.nom}`}
             src={file.apercuUrl}
             className="drive-preview__iframe"
+            allowFullScreen
           />
         );
       case "document":

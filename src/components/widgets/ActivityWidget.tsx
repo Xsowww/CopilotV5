@@ -11,6 +11,8 @@ interface ActivityWidgetProps {
   onActivityNavigate?: (activity: WidgetActivity) => void;
 }
 
+const MAX_WIDGET_ITEMS = 3;
+
 export const ActivityWidget = ({
   activities,
   loading,
@@ -18,7 +20,7 @@ export const ActivityWidget = ({
   disabled = false,
   onActivityNavigate,
 }: ActivityWidgetProps) => {
-  const highlights = activities.slice(0, 3); // Modification : réduire le flux pour garder le widget léger.
+  const highlights = activities.slice(0, MAX_WIDGET_ITEMS); // Modification : réduire le flux pour garder le widget léger.
 
   return (
     <WidgetCard

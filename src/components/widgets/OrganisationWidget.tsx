@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { MdOutlineCalendarMonth } from "react-icons/md";
 import { WidgetCard } from "../common/WidgetCard";
 import { formatCalendarDate, truncateText } from "../../utils/formatters";
@@ -26,10 +27,15 @@ export const OrganisationWidget = ({
   onTacheNavigate,
   onRappelNavigate,
 }: OrganisationWidgetProps) => {
-  // Modification : ne conserver que la première entrée de chaque catégorie pour proposer un résumé synthétique.
-  const prochainEvenement = evenements[0];
-  const prochaineTache = taches[0];
-  const prochainRappel = rappels[0];
+  // Modification : tri par date pour sélectionner les éléments réellement les plus récents.
+  const [prochainEvenement, prochaineTache, prochainRappel] = useMemo(() => {
+    const sortByDate = <T extends { date: string }>(items: T[]) =>
+      [...items].sort((a, b) => a.date.localeCompare(b.date));
+    const sortedEvents = sortByDate(evenements);
+    const sortedTasks = sortByDate(taches);
+    const sortedReminders = sortByDate(rappels);
+    return [sortedEvents[0], sortedTasks[0], sortedReminders[0]];
+  }, [evenements, taches, rappels]);
 
   const renderEvenement = () => {
     if (!prochainEvenement) {
@@ -50,11 +56,12 @@ export const OrganisationWidget = ({
           <span>{date.mois}</span>
         </div>
         <div className="organisation-widget__details">
-          <p className="organisation-widget__title">{prochainEvenement.titre}</p>
+          <p className="organisation-widget__title">{truncateText(prochainEvenement.titre, 18)}</p>
           <span className="organisation-widget__meta">
-            {(date.heure ?? "Toute la journée")} · {prochainEvenement.localisation ?? "Lieu à confirmer"}
+            {(date.heure ?? "Toute la journée")} · Priorité {prochainEvenement.priorite ?? "normale"}
           </span>
         </div>
+        {prochainEvenement.urgent && <span className="organisation-widget__flag">Urgent</span>}
       </button>
     );
   };
@@ -77,7 +84,7 @@ export const OrganisationWidget = ({
           {prochaineTache.priorite}
         </div>
         <div className="organisation-widget__details">
-          <p className="organisation-widget__title">{prochaineTache.titre}</p>
+          <p className="organisation-widget__title">{truncateText(prochaineTache.titre, 18)}</p>
           <span className="organisation-widget__meta">
             Statut : {prochaineTache.statut.replace(/_/g, " ")} · Échéance {echeance.jour} {echeance.mois}
           </span>

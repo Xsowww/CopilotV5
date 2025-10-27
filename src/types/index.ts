@@ -55,8 +55,10 @@ export interface OrganisationItemBase {
   heure?: string;
 }
 
+// Modification : un événement gère désormais la notion d'urgence et de priorité plutôt qu'une localisation.
 export interface Evenement extends OrganisationItemBase {
-  localisation?: string;
+  priorite: Priority;
+  urgent: boolean;
   categorie?: string;
 }
 
