@@ -469,9 +469,9 @@ label {
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-strong);
   box-shadow: var(--shadow-strong);
-  width: min(440px, 92vw);
-  max-height: min(640px, 90vh);
-  padding: 28px;
+  width: min(600px, 96vw); /* Agrandit la fenêtre Profil comme demandé. */
+  max-height: min(720px, 92vh);
+  padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -588,6 +588,7 @@ label {
   min-height: 0;
   min-width: 0;
   height: 100%;
+  overflow: hidden; /* Correctif : évite que le contenu déborde du cadre du widget. */
 }
 
 .widget-card:hover {
@@ -641,7 +642,8 @@ label {
   flex-direction: column;
   gap: 12px;
   flex: 1;
-  overflow: visible;
+  min-height: 0;
+  overflow: hidden; /* Correctif : maintien les contenus internes dans la hauteur fixe des widgets. */
 }
 
 .widget-list {
@@ -650,7 +652,9 @@ label {
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  overflow: visible;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .widget-list li {
@@ -660,6 +664,7 @@ label {
   gap: 12px;
   font-size: 0.9rem;
   min-width: 0;
+  min-height: 0;
 }
 
 /* Ajustement : alignement flexible pour éviter les débordements dans les widgets. */
@@ -675,6 +680,8 @@ label {
   border: 1px solid transparent;
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
   text-align: left;
+  min-height: 0;
+  flex: 1;
 }
 
 .widget-list__link:hover {
@@ -689,6 +696,10 @@ label {
   line-height: 1.25;
   white-space: normal;
   word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* Correctif : limite l'aperçu sans laisser déborder le texte. */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .widget-list__main {
@@ -738,6 +749,7 @@ label {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   min-width: 0;
+  min-height: 0;
 }
 
 .organisation-widget__section {
@@ -749,6 +761,8 @@ label {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.2);
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .organisation-widget__section h3 {
@@ -770,6 +784,7 @@ label {
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
   width: 100%;
   text-align: left;
+  min-height: 0;
 }
 
 .organisation-widget__button:hover {
@@ -805,6 +820,10 @@ label {
   font-weight: 600;
   white-space: normal;
   word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .organisation-widget__meta {
@@ -812,6 +831,10 @@ label {
   color: var(--text-tertiary);
   white-space: normal;
   word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .organisation-widget__flag {
@@ -1025,10 +1048,10 @@ label {
 .drive-grid__item {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   justify-content: flex-start;
-  padding: 22px 18px;
+  padding: 18px 16px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.05);
@@ -1047,8 +1070,8 @@ label {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
+  width: 60px;
+  height: 60px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
@@ -1107,6 +1130,7 @@ label {
   z-index: 140;
   min-width: 200px;
   backdrop-filter: blur(calc(var(--glass-blur) * 0.5));
+  transform: translate(var(--menu-offset-x, 0px), var(--menu-offset-y, 0px));
 }
 
 .context-menu li button {
@@ -1123,8 +1147,9 @@ label {
 
 .notification-toast {
   position: fixed;
-  right: clamp(20px, 4vw, 40px);
-  bottom: clamp(20px, 4vw, 40px);
+  top: clamp(24px, 6vh, 80px);
+  left: 50%;
+  transform: translate(-50%, 0);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1135,6 +1160,7 @@ label {
   box-shadow: var(--shadow-soft);
   color: var(--text-primary);
   z-index: 160;
+  animation: toast-pop 240ms ease-out;
 }
 
 .notification-toast__type {
@@ -1159,6 +1185,17 @@ label {
 .notification-toast strong {
   font-size: 0.95rem;
   font-weight: 600;
+}
+
+@keyframes toast-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 .drive-preview {

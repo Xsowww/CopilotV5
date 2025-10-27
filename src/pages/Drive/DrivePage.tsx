@@ -307,8 +307,15 @@ export const DrivePage = () => {
               onContextMenu={(event) => openContextMenu(event, { targetId: item.id })}
               onClick={() => item.type === "dossier" && handleOpenNode(item)}
             >
+              {/* Ajustement : icônes réduites pour un rendu plus proche d'un bureau Windows. */}
               <span className="drive-grid__icon" data-type={item.type}>
-                {item.type === "dossier" ? <PiFoldersFill size={44} /> : <PiFileTextFill size={40} />}
+                {item.type === "dossier"
+                  ? (
+                    <PiFoldersFill size={36} />
+                  )
+                  : (
+                    <PiFileTextFill size={32} />
+                  )}
               </span>
               <div className="drive-grid__info">
                 <span className="drive-grid__name">{item.nom}</span>

@@ -217,7 +217,8 @@ export const TopBar = () => {
     if (!toast) {
       return;
     }
-    const timeout = window.setTimeout(() => setToast(null), 2_000);
+    // Mise à jour : garder la notification visuelle affichée 5 secondes pour mimer une alerte mobile.
+    const timeout = window.setTimeout(() => setToast(null), 5_000);
     return () => window.clearTimeout(timeout);
   }, [toast]);
 

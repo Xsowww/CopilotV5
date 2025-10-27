@@ -2,6 +2,7 @@ import {
   type Dispatch,
   type PropsWithChildren,
   type SetStateAction,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -22,52 +23,49 @@ interface FloatingContextMenuProps<Payload> {
  */
 export const FloatingContextMenu = <Payload,>({
   state,
-  setState,
+  setState: _setState,
   role = "menu",
   className = "context-menu",
   children,
 }: PropsWithChildren<FloatingContextMenuProps<Payload>>) => {
   const ref = useRef<HTMLUListElement | null>(null);
 
-  useLayoutEffect(() => {
-    if (!state.visible || !ref.current) {
+  const applyOffsets = useCallback(() => {
+    const element = ref.current;
+    if (!state.visible || !element) {
       return;
     }
-    const element = ref.current;
     const padding = 4;
     const { offsetWidth, offsetHeight } = element;
-    let nextX = state.x;
-    let nextY = state.y;
     const maxX = Math.max(padding, window.innerWidth - offsetWidth - padding);
     const maxY = Math.max(padding, window.innerHeight - offsetHeight - padding);
-    nextX = Math.min(Math.max(padding, nextX), maxX);
-    nextY = Math.min(Math.max(padding, nextY), maxY);
-    if (nextX !== state.x || nextY !== state.y) {
-      // Ajustement : réaligner le menu sur la zone visible sans perdre la cible initiale.
-      setState((prev) => ({ ...prev, x: nextX, y: nextY }));
+    const nextX = Math.min(Math.max(padding, state.x), maxX);
+    const nextY = Math.min(Math.max(padding, state.y), maxY);
+    // Correctif : applique un décalage CSS sans déplacer le point d'ancrage initial du clic droit.
+    element.style.setProperty("--menu-offset-x", `${nextX - state.x}px`);
+    element.style.setProperty("--menu-offset-y", `${nextY - state.y}px`);
+  }, [state]);
+
+  useLayoutEffect(() => {
+    if (!state.visible) {
+      return;
     }
-  }, [setState, state]);
+    applyOffsets();
+    return () => {
+      const element = ref.current;
+      if (element) {
+        element.style.removeProperty("--menu-offset-x");
+        element.style.removeProperty("--menu-offset-y");
+      }
+    };
+  }, [applyOffsets, state.visible]);
 
   useEffect(() => {
     if (!state.visible) {
       return;
     }
     const handleResize = () => {
-      const padding = 4;
-      setState((prev) => {
-        const element = ref.current;
-        if (!element) {
-          return prev;
-        }
-        const { offsetWidth, offsetHeight } = element;
-        const maxX = Math.max(padding, window.innerWidth - offsetWidth - padding);
-        const maxY = Math.max(padding, window.innerHeight - offsetHeight - padding);
-        return {
-          ...prev,
-          x: Math.min(Math.max(padding, prev.x), maxX),
-          y: Math.min(Math.max(padding, prev.y), maxY),
-        };
-      });
+      applyOffsets();
     };
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", handleResize, true);
@@ -75,7 +73,7 @@ export const FloatingContextMenu = <Payload,>({
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("scroll", handleResize, true);
     };
-  }, [setState, state.visible]);
+  }, [applyOffsets, state.visible]);
 
   if (!state.visible || typeof document === "undefined") {
     return null;
