@@ -165,22 +165,10 @@ const initialClipboard: ClipboardState = {
 
 const AppDataContext = createContext<AppDataContextValue | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  drive: "copilot-drive",
-  notes: "copilot-notes",
-  organisation: "copilot-organisation",
-  layout: "copilot-widget-layout",
-  profile: "copilot-profile",
-  chat: "copilot-chat",
-  activities: "copilot-activities",
-  notifications: "copilot-notifications",
-};
-
-const isBrowser = typeof window !== "undefined";
-
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg"]);
 const TEXT_EXTENSIONS = new Set(["txt", "md", "json", "csv"]);
 const DOCUMENT_EXTENSIONS = new Set(["doc", "docx", "rtf"]);
+const isBrowser = typeof window !== "undefined";
 
 const readFileAsDataUrl = (file: File) =>
   new Promise<string>((resolve, reject) => {
@@ -197,27 +185,6 @@ const readFileAsText = (file: File) =>
     reader.onerror = () => reject(reader.error);
     reader.readAsText(file);
   });
-
-const readStorage = <T,>(key: string, fallback: T): T => {
-  if (!isBrowser) return fallback;
-  const raw = window.localStorage.getItem(key);
-  if (!raw) return fallback;
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(fallback)) {
-      return (Array.isArray(parsed) ? parsed : fallback) as T;
-    }
-    return { ...fallback, ...parsed };
-  } catch (error) {
-    console.warn("Impossible de lire le stockage local", error);
-    return fallback;
-  }
-};
-
-const writeStorage = (key: string, value: unknown) => {
-  if (!isBrowser) return;
-  window.localStorage.setItem(key, JSON.stringify(value));
-};
 
 const cloneDriveSubtree = (nodes: Record<string, DriveNode>, nodeId: string, parentId: string | null) => {
   const node = nodes[nodeId];
@@ -264,31 +231,17 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
   const supabase = getSupabaseClient();
   const defaultProfile = useMemo(() => createDefaultProfile(user), [user]);
 
-  const [drive, setDrive] = useState<DriveState>(() =>
-    readStorage(STORAGE_KEYS.drive, createDefaultDriveState())
-  );
-  const [notes, setNotes] = useState<NotesState>(() =>
-    readStorage(STORAGE_KEYS.notes, createDefaultNotesState())
-  );
+  const [drive, setDrive] = useState<DriveState>(createDefaultDriveState);
+  const [notes, setNotes] = useState<NotesState>(createDefaultNotesState);
   const [organisation, setOrganisation] = useState<OrganisationState>(() =>
-    normalizeOrganisationState(readStorage(STORAGE_KEYS.organisation, createDefaultOrganisationState()))
+    normalizeOrganisationState(createDefaultOrganisationState())
   );
-  const [activities, setActivities] = useState<WidgetActivity[]>(() =>
-    readStorage(STORAGE_KEYS.activities, [] as WidgetActivity[])
-  );
-  const [notifications, setNotifications] = useState<SystemNotification[]>(() =>
-    readStorage(STORAGE_KEYS.notifications, [] as SystemNotification[])
-  );
-  const [widgetLayout, setWidgetLayout] = useState<WidgetLayout>(() =>
-    readStorage(STORAGE_KEYS.layout, defaultLayout)
-  );
+  const [activities, setActivities] = useState<WidgetActivity[]>(() => []);
+  const [notifications, setNotifications] = useState<SystemNotification[]>(() => []);
+  const [widgetLayout, setWidgetLayout] = useState<WidgetLayout>(defaultLayout);
   const [clipboard, setClipboard] = useState<ClipboardState>(initialClipboard);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() =>
-    readStorage(STORAGE_KEYS.chat, defaultMessages)
-  );
-  const [profile, setProfile] = useState<UserProfile>(() =>
-    readStorage(STORAGE_KEYS.profile, defaultProfile)
-  );
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => defaultMessages);
+  const [profile, setProfile] = useState<UserProfile>(() => defaultProfile);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isHydrating, setIsHydrating] = useState(false);
   const [isPersisting, setIsPersisting] = useState(false);
@@ -405,44 +358,11 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
   }, [activities, chatMessages, drive, isHydrated, notes, notifications, organisation, profile, supabase, user.id, widgetLayout]);
 
   useEffect(() => {
-    writeStorage(STORAGE_KEYS.drive, drive);
+    if (!isHydrated) {
+      return;
+    }
     void persistState();
-  }, [drive, persistState]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.notes, notes);
-    void persistState();
-  }, [notes, persistState]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.organisation, organisation);
-    void persistState();
-  }, [organisation, persistState]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.layout, widgetLayout);
-    void persistState();
-  }, [widgetLayout, persistState]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.profile, profile);
-    void persistState();
-  }, [profile, persistState]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.chat, chatMessages);
-    void persistState();
-  }, [chatMessages, persistState]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.activities, activities);
-    void persistState();
-  }, [activities, persistState]);
-
-  useEffect(() => {
-    writeStorage(STORAGE_KEYS.notifications, notifications);
-    void persistState();
-  }, [notifications, persistState]);
+  }, [isHydrated, persistState]);
 
   useEffect(() => {
     if (!isBrowser) {

@@ -61,7 +61,7 @@ Chaque espace fonctionne de manière indépendante, avec des composants dédiés
 - **Notes** : navigation par dossiers et lecture riche des notes.
 - **Chatbot Copilot** : cadran fixe inspiré des assistants iCloud, connecté à l'API mock pour simuler les commandes vocales/textuelles.
 - **Authentification** : écran d'inscription/connexion e-mail + mot de passe (Supabase Auth) avec redirection automatique vers le tableau de bord une fois connecté.
-- **Persistance Supabase** : chaque modification est synchronisée en temps réel dans la table `app_state` pour l'utilisateur connecté.
+- **Persistance Supabase** : chaque modification est synchronisée en temps réel dans la table `app_state` pour l'utilisateur connecté et rechargée à la connexion, sans recours au stockage local.
 
 ## Lancer le projet
 
@@ -95,6 +95,7 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
      widget_layout jsonb default '{}'::jsonb,
      profile jsonb default '{}'::jsonb,
      chat jsonb default '[]'::jsonb,
+     notifications jsonb default '[]'::jsonb,
      updated_at timestamptz default now()
    );
 
@@ -105,6 +106,10 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
 
    create policy "Utilisation écriture" on app_state
      for upsert using (auth.uid() = user_id);
+
+   -- Si la table existait déjà sans colonne `notifications`, exécutez également :
+   alter table app_state
+     add column if not exists notifications jsonb default '[]'::jsonb;
    ```
 
 4. **(Optionnel) Créer un bucket de stockage** si vous souhaitez externaliser les fichiers importés :
