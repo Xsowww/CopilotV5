@@ -120,7 +120,22 @@ export const OrganisationPage = () => {
     startOfCurrentWeek,
   ]);
 
-  const eventsForDay = (date: Date) => events.filter((event) => isSameDay(event.dateObj, date));
+  // Correctif : tri chronologique des événements par horaire déclaré.
+  const getMinutesFromHour = (value?: string | null) => {
+    if (!value) {
+      return 24 * 60 + 1;
+    }
+    const [hours, minutes] = value.split(":").map((part) => Number.parseInt(part, 10));
+    if (Number.isNaN(hours)) {
+      return 24 * 60 + 1;
+    }
+    return hours * 60 + (Number.isNaN(minutes) ? 0 : minutes);
+  };
+
+  const eventsForDay = (date: Date) =>
+    events
+      .filter((event) => isSameDay(event.dateObj, date))
+      .sort((a, b) => getMinutesFromHour(a.heure) - getMinutesFromHour(b.heure));
   const tasksForDay = (date: Date) => tasks.filter((task) => isSameDay(task.dateObj, date));
   const remindersForDay = (date: Date) => reminders.filter((reminder) => isSameDay(reminder.dateObj, date));
 
@@ -546,7 +561,7 @@ export const OrganisationPage = () => {
                       onContextMenu={(event) => openContextMenu(event, { kind: "rappel", id: reminder.id })}
                     >
                       <div>
-                        <strong>{truncateText(reminder.titre, 7)}</strong>
+                        <strong>{truncateText(reminder.titre, 18)}</strong>
                         <span>{truncateText(reminder.description ?? "", 24)}</span>
                       </div>
                     </button>
@@ -800,7 +815,7 @@ export const OrganisationPage = () => {
                     Supprimer
                   </button>
                 )}
-                <div>
+                <div className="organisation-editor__actions">
                   <button type="button" className="btn-secondary" onClick={() => setEditor(null)}>
                     Annuler
                   </button>

@@ -139,9 +139,13 @@ export const NotesPage = () => {
   const isDeleteFolderDialog = dialog.open && dialog.type === "delete-folder";
   const isDeleteNoteDialog = dialog.open && dialog.type === "delete-note";
 
+  // Correctif : créer des dossiers frères par défaut pour éviter l'indentation progressive involontaire.
   const handleCreateFolder = () => {
-    if (!selectedFolderId) return;
-    setDialog({ open: true, type: "create-folder", parentId: selectedFolderId });
+    const baseFolderId = selectedFolderId ?? rootFolderId;
+    if (!baseFolderId) return;
+    const selectedFolder = notes.folders[baseFolderId];
+    const parentId = selectedFolder?.parentId ?? baseFolderId;
+    setDialog({ open: true, type: "create-folder", parentId });
     closeContextMenu();
   };
 

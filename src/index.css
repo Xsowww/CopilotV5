@@ -22,7 +22,7 @@
   --radius-md: 20px;
   --radius-sm: 14px;
   --glass-blur: 22px;
-  --dashboard-widget-height: 296px; /* Ajustement : widgets plus hauts pour conserver deux éléments sans débordement. */
+  --dashboard-widget-height: 320px; /* Ajustement : widgets légèrement plus hauts pour laisser respirer deux éléments récents. */
   font-family: "SF Pro Display", "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -678,7 +678,7 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   font-size: 0.9rem;
   min-width: 0;
   min-height: 0;
@@ -1062,8 +1062,8 @@ label {
 
 .drive-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 14px;
 }
 
 .drive-grid__item {
@@ -1079,6 +1079,7 @@ label {
   transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
   text-align: left;
   cursor: pointer;
+  min-height: 124px;
 }
 
 .drive-grid__item:hover {
@@ -1091,12 +1092,12 @@ label {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
-  box-shadow: inset 0 -5px 10px rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 -4px 8px rgba(0, 0, 0, 0.18);
 }
 
 .drive-grid__icon[data-type="dossier"] {
@@ -1322,19 +1323,19 @@ label {
 
 .notification-toast {
   position: fixed;
-  top: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
   left: 50%;
   transform: translate(-50%, 0);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 20px 32px;
+  gap: 10px;
+  padding: 22px 36px;
   border-radius: var(--radius-md);
-  border: 1px solid rgba(138, 192, 255, 0.65);
-  background: linear-gradient(170deg, rgba(18, 46, 118, 0.96), rgba(58, 110, 210, 0.94));
-  box-shadow: 0 24px 60px -20px rgba(3, 13, 42, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(168, 208, 255, 0.85);
+  background: linear-gradient(172deg, rgba(18, 46, 118, 0.98), rgba(64, 124, 232, 0.96));
+  box-shadow: 0 28px 64px -18px rgba(3, 13, 42, 0.78), inset 0 1px 0 rgba(255, 255, 255, 0.32);
   color: var(--text-primary);
-  z-index: 200;
+  z-index: 400;
   animation: toast-pop 240ms ease-out;
 }
 
@@ -2039,6 +2040,14 @@ label {
   align-items: center;
 }
 
+.organisation-editor__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
 .dialog-overlay {
   position: fixed;
   inset: 0;
@@ -2083,7 +2092,8 @@ label {
 .dialog-card__footer {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .dialog-field {

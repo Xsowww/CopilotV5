@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { PiBellSimpleFill, PiCloudFill } from "react-icons/pi";
@@ -217,6 +218,8 @@ export const TopBar = () => {
     }
   }, [profile.modeConcentration]);
 
+  const isBrowser = typeof document !== "undefined";
+
   return (
     <>
       <header className="topbar">
@@ -309,14 +312,17 @@ export const TopBar = () => {
           </div>
         </div>
       </header>
-      {toast && profile.notificationsActives && !profile.modeConcentration && (
-        <div className="notification-toast" role="status" aria-live="polite">
-          <span className={`notification-toast__type notification-toast__type--${toast.type}`}>
-            Nouvelle notification
-          </span>
-          <strong>{toast.titre}</strong>
-        </div>
-      )}
+      {toast && profile.notificationsActives && !profile.modeConcentration && isBrowser
+        ? createPortal(
+            <div className="notification-toast" role="status" aria-live="polite">
+              <span className={`notification-toast__type notification-toast__type--${toast.type}`}>
+                Nouvelle notification
+              </span>
+              <strong>{toast.titre}</strong>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 };
