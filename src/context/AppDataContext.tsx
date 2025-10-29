@@ -394,7 +394,9 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         notifications: notificationsState,
         updated_at: new Date().toISOString(),
       };
-      const { error } = await supabase.from("app_state").upsert(payload);
+      const { error } = await supabase
+        .from("app_state")
+        .upsert(payload, { onConflict: "user_id", returning: "minimal" });
       if (error) {
         console.error("Synchronisation Supabase impossible", error.message);
       }
@@ -423,12 +425,20 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     }, 300);
   }, [isHydrated, persistState, supabase]);
 
+  // Mise à jour : helper centralisé pour déclencher immédiatement une sauvegarde programmée.
+  const triggerPersist = useCallback(() => {
+    if (!isHydrated) {
+      return;
+    }
+    schedulePersist();
+  }, [isHydrated, schedulePersist]);
+
   // Dès que l'un des espaces évolue après hydratation, on déclenche une persistance planifiée.
   useEffect(() => {
     if (!isHydrated) {
       return;
     }
-    schedulePersist();
+    triggerPersist();
   }, [
     activities,
     chatMessages,
@@ -438,7 +448,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     notifications,
     organisation,
     profile,
-    schedulePersist,
+    triggerPersist,
     widgetLayout,
   ]);
 
@@ -467,8 +477,9 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         ...activity,
       };
       setActivities((prev) => [newActivity, ...prev].slice(0, 20));
+      triggerPersist();
     },
-    []
+    [triggerPersist]
   );
 
   const updateParentTimestamp = useCallback((nodes: Record<string, DriveNode>, parentId: string | null) => {
@@ -512,6 +523,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         };
         return { ...prev, nodes: updateParentTimestamp(nodes, parent.parentId) };
       });
+      triggerPersist();
       addActivity({
         type: "drive",
         titre: "Dossier créé",
@@ -519,7 +531,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         utilisateur: profile.nom,
       });
     },
-    [addActivity, profile.nom, updateParentTimestamp]
+    [addActivity, profile.nom, triggerPersist, updateParentTimestamp]
   );
 
   const uploadDriveFiles = useCallback(
@@ -596,6 +608,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
           const updatedNodes = updateParentTimestamp(nodes, parent.parentId);
           return { ...prev, nodes: updatedNodes };
         });
+        triggerPersist();
 
         addActivity({
           type: "drive",
@@ -607,7 +620,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
 
       void processFiles();
     },
-    [addActivity, profile.nom, updateParentTimestamp]
+    [addActivity, profile.nom, triggerPersist, updateParentTimestamp]
   );
 
   const renameDriveNode = useCallback((nodeId: string, nom: string) => {
@@ -623,13 +636,14 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       const updatedNodes = updateParentTimestamp(nodes, node.parentId);
       return { ...prev, nodes: updatedNodes };
     });
+    triggerPersist();
     addActivity({
       type: "drive",
       titre: "Élément renommé",
       description: `"${nom}" a été renommé`,
       utilisateur: profile.nom,
     });
-  }, [addActivity, profile.nom, updateParentTimestamp]);
+  }, [addActivity, profile.nom, triggerPersist, updateParentTimestamp]);
 
   const deleteDriveNode = useCallback((nodeId: string) => {
     setDrive((prev) => {
@@ -657,13 +671,14 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       }
       return { ...prev, nodes };
     });
+    triggerPersist();
     addActivity({
       type: "drive",
       titre: "Élément supprimé",
       description: "Un élément a été retiré du drive",
       utilisateur: profile.nom,
     });
-  }, [addActivity, profile.nom]);
+  }, [addActivity, profile.nom, triggerPersist]);
 
   const updateDriveFile = useCallback(
     (nodeId: string, updates: Partial<DriveFileNode>) => {
@@ -681,6 +696,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         const updatedNodes = updateParentTimestamp(nodes, node.parentId);
         return { ...prev, nodes: updatedNodes };
       });
+      triggerPersist();
       addActivity({
         type: "drive",
         titre: "Fichier mis à jour",
@@ -688,7 +704,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         utilisateur: profile.nom,
       });
     },
-    [addActivity, profile.nom, updateParentTimestamp]
+    [addActivity, profile.nom, triggerPersist, updateParentTimestamp]
   );
 
   const moveDriveNode = useCallback((nodeId: string, targetFolderId: string) => {
@@ -720,13 +736,14 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       };
       return { ...prev, nodes };
     });
+    triggerPersist();
     addActivity({
       type: "drive",
       titre: "Élément déplacé",
       description: "Un élément a été déplacé vers un dossier",
       utilisateur: profile.nom,
     });
-  }, [addActivity, profile.nom]);
+  }, [addActivity, profile.nom, triggerPersist]);
 
   const copyDriveNode = useCallback((nodeId: string) => {
     setClipboard({ elementId: nodeId, mode: "copy" });
@@ -783,6 +800,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       }
       return { ...prev, nodes };
     });
+    triggerPersist();
     clearClipboard();
     addActivity({
       type: "drive",
@@ -790,7 +808,14 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       description: "Une action de collage vient d'être effectuée",
       utilisateur: profile.nom,
     });
-  }, [addActivity, clearClipboard, clipboard.elementId, clipboard.mode, profile.nom]);
+  }, [
+    addActivity,
+    clearClipboard,
+    clipboard.elementId,
+    clipboard.mode,
+    profile.nom,
+    triggerPersist,
+  ]);
 
   const createNoteFolder = useCallback(
     (parentId: string, nom: string) => {
@@ -812,6 +837,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         }
         return { ...prev, folders };
       });
+      triggerPersist();
       addActivity({
         type: "notes",
         titre: "Dossier de notes créé",
@@ -820,7 +846,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       });
       return id;
     },
-    [addActivity, profile.nom]
+    [addActivity, profile.nom, triggerPersist]
   );
 
   const renameNoteFolder = useCallback((folderId: string, nom: string) => {
@@ -835,7 +861,8 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         },
       };
     });
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   // Nouvelle fonctionnalité : suppression récursive de dossiers de notes avec nettoyage des enfants.
   const deleteNoteFolder = useCallback(
@@ -880,17 +907,19 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
           nextNotes[noteId] = note;
         });
 
-        return { folders: nextFolders, notes: nextNotes };
-      });
+      return { folders: nextFolders, notes: nextNotes };
+    });
 
-      addActivity({
-        type: "notes",
-        titre: "Dossier supprimé",
-        description: "Un dossier de notes a été retiré",
-        utilisateur: profile.nom,
-      });
-    },
-    [addActivity, profile.nom]
+    triggerPersist();
+
+    addActivity({
+      type: "notes",
+      titre: "Dossier supprimé",
+      description: "Un dossier de notes a été retiré",
+      utilisateur: profile.nom,
+    });
+  },
+    [addActivity, profile.nom, triggerPersist]
   );
 
   const createNote = useCallback(
@@ -910,6 +939,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
           notes: { ...prev.notes, [id]: note },
         };
       });
+      triggerPersist();
       addActivity({
         type: "notes",
         titre: "Note créée",
@@ -918,7 +948,7 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       });
       return id;
     },
-    [addActivity, profile.nom]
+    [addActivity, profile.nom, triggerPersist]
   );
 
   const updateNote = useCallback((noteId: string, contenu: string, titre?: string) => {
@@ -939,7 +969,8 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         },
       };
     });
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   const deleteNote = useCallback((noteId: string) => {
     setNotes((prev) => {
@@ -948,7 +979,8 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       delete notesMap[noteId];
       return { ...prev, notes: notesMap };
     });
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   const moveNote = useCallback((noteId: string, dossierId: string) => {
     setNotes((prev) => {
@@ -966,23 +998,40 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         },
       };
     });
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
-  const saveWidgetLayout = useCallback((layout: WidgetLayout) => {
-    setWidgetLayout(layout);
-  }, []);
+  const saveWidgetLayout = useCallback(
+    (layout: WidgetLayout) => {
+      setWidgetLayout(layout);
+      triggerPersist();
+    },
+    [triggerPersist]
+  );
 
-  const updateProfile = useCallback((updates: Partial<UserProfile>) => {
-    setProfile((prev) => ({ ...prev, ...updates }));
-  }, []);
+  const updateProfile = useCallback(
+    (updates: Partial<UserProfile>) => {
+      setProfile((prev) => ({ ...prev, ...updates }));
+      triggerPersist();
+    },
+    [triggerPersist]
+  );
 
-  const addChatMessage = useCallback((message: ChatMessage) => {
-    setChatMessages((prev) => [...prev, message]);
-  }, []);
+  const addChatMessage = useCallback(
+    (message: ChatMessage) => {
+      setChatMessages((prev) => [...prev, message]);
+      triggerPersist();
+    },
+    [triggerPersist]
+  );
 
-  const replaceChatMessages = useCallback((messages: ChatMessage[]) => {
-    setChatMessages(messages);
-  }, []);
+  const replaceChatMessages = useCallback(
+    (messages: ChatMessage[]) => {
+      setChatMessages(messages);
+      triggerPersist();
+    },
+    [triggerPersist]
+  );
 
   const addNotification = useCallback(
     ({ titre, message, niveau = "info" }: { titre: string; message: string; niveau?: SystemNotification["niveau"] }) => {
@@ -997,21 +1046,26 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
         },
         ...prev,
       ]);
+      triggerPersist();
     },
-    []
+    [triggerPersist]
   );
 
-  const markNotificationsAsRead = useCallback((ids?: string[]) => {
-    setNotifications((prev) => {
-      if (!ids || ids.length === 0) {
-        return prev.map((notification) => (notification.lu ? notification : { ...notification, lu: true }));
-      }
-      const allowed = new Set(ids);
-      return prev.map((notification) =>
-        allowed.has(notification.id) ? { ...notification, lu: true } : notification
-      );
-    });
-  }, []);
+  const markNotificationsAsRead = useCallback(
+    (ids?: string[]) => {
+      setNotifications((prev) => {
+        if (!ids || ids.length === 0) {
+          return prev.map((notification) => (notification.lu ? notification : { ...notification, lu: true }));
+        }
+        const allowed = new Set(ids);
+        return prev.map((notification) =>
+          allowed.has(notification.id) ? { ...notification, lu: true } : notification
+        );
+      });
+      triggerPersist();
+    },
+    [triggerPersist]
+  );
 
   const saveEvenement = useCallback((evenement: Evenement) => {
     const payload: Evenement = {
@@ -1029,14 +1083,16 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       }
       return { ...prev, evenements };
     });
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   const deleteEvenement = useCallback((evenementId: string) => {
     setOrganisation((prev) => ({
       ...prev,
       evenements: prev.evenements.filter((item) => item.id !== evenementId),
     }));
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   const saveTache = useCallback((tache: Tache) => {
     const normalized: Tache = {
@@ -1053,14 +1109,16 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       }
       return { ...prev, taches };
     });
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   const deleteTache = useCallback((tacheId: string) => {
     setOrganisation((prev) => ({
       ...prev,
       taches: prev.taches.filter((item) => item.id !== tacheId),
     }));
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   const saveRappel = useCallback((rappel: Rappel) => {
     setOrganisation((prev) => {
@@ -1073,14 +1131,16 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
       }
       return { ...prev, rappels };
     });
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   const deleteRappel = useCallback((rappelId: string) => {
     setOrganisation((prev) => ({
       ...prev,
       rappels: prev.rappels.filter((item) => item.id !== rappelId),
     }));
-  }, []);
+    triggerPersist();
+  }, [triggerPersist]);
 
   // Mise à jour : surveillance des tâches terminées pour générer un décompte automatique et notifier la suppression à J+1.
   useEffect(() => {
