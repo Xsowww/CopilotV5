@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type PropsWithChildren,
 } from "react";
@@ -247,6 +248,39 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
   const [isPersisting, setIsPersisting] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
+  const latestStateRef = useRef<{
+    drive: DriveState;
+    notes: NotesState;
+    organisation: OrganisationState;
+    activities: WidgetActivity[];
+    widgetLayout: WidgetLayout;
+    profile: UserProfile;
+    chatMessages: ChatMessage[];
+    notifications: SystemNotification[];
+  }>({
+    drive,
+    notes,
+    organisation,
+    activities,
+    widgetLayout,
+    profile,
+    chatMessages,
+    notifications,
+  });
+
+  useEffect(() => {
+    latestStateRef.current = {
+      drive,
+      notes,
+      organisation,
+      activities,
+      widgetLayout,
+      profile,
+      chatMessages,
+      notifications,
+    };
+  }, [activities, chatMessages, drive, notes, notifications, organisation, profile, widgetLayout]);
+
   // Intégration Supabase : hydratation initiale des espaces pour l'utilisateur actif.
   const hydrateFromSupabase = useCallback(async () => {
     if (!supabase) {
@@ -330,22 +364,34 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
   const isSyncing = isHydrating || isPersisting;
 
   // Intégration Supabase : persistance centralisée de l'état utilisateur.
+  // Synchronisation Supabase : l'état le plus récent est sérialisé à la demande via un ref mutable.
   const persistState = useCallback(async () => {
     if (!supabase || !isHydrated) {
       return;
     }
     setIsPersisting(true);
     try {
+      const {
+        drive: driveState,
+        notes: notesState,
+        organisation: organisationState,
+        activities: activitiesState,
+        widgetLayout: widgetLayoutState,
+        profile: profileState,
+        chatMessages: chatMessagesState,
+        notifications: notificationsState,
+      } = latestStateRef.current;
+
       const payload = {
         user_id: user.id,
-        drive,
-        notes,
-        organisation,
-        activities,
-        widget_layout: widgetLayout,
-        profile,
-        chat: chatMessages,
-        notifications,
+        drive: driveState,
+        notes: notesState,
+        organisation: organisationState,
+        activities: activitiesState,
+        widget_layout: widgetLayoutState,
+        profile: profileState,
+        chat: chatMessagesState,
+        notifications: notificationsState,
         updated_at: new Date().toISOString(),
       };
       const { error } = await supabase.from("app_state").upsert(payload);
@@ -355,14 +401,52 @@ export const AppDataProvider = ({ children, user }: AppDataProviderProps) => {
     } finally {
       setIsPersisting(false);
     }
-  }, [activities, chatMessages, drive, isHydrated, notes, notifications, organisation, profile, supabase, user.id, widgetLayout]);
+  }, [isHydrated, supabase, user.id]);
 
+  const persistTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Mise à jour : temporisation légère pour regrouper les mutations rapides avant la sauvegarde distante.
+  const schedulePersist = useCallback(() => {
+    if (!supabase || !isHydrated) {
+      return;
+    }
+    if (!isBrowser) {
+      void persistState();
+      return;
+    }
+    if (persistTimer.current) {
+      window.clearTimeout(persistTimer.current);
+    }
+    persistTimer.current = window.setTimeout(() => {
+      persistTimer.current = null;
+      void persistState();
+    }, 300);
+  }, [isHydrated, persistState, supabase]);
+
+  // Dès que l'un des espaces évolue après hydratation, on déclenche une persistance planifiée.
   useEffect(() => {
     if (!isHydrated) {
       return;
     }
-    void persistState();
-  }, [isHydrated, persistState]);
+    schedulePersist();
+  }, [
+    activities,
+    chatMessages,
+    drive,
+    isHydrated,
+    notes,
+    notifications,
+    organisation,
+    profile,
+    schedulePersist,
+    widgetLayout,
+  ]);
+
+  useEffect(() => () => {
+    if (persistTimer.current && isBrowser) {
+      window.clearTimeout(persistTimer.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isBrowser) {
