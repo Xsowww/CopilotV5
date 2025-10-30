@@ -162,7 +162,7 @@ Pour que je puisse brancher l'agent Mistral et que l'utilisateur puisse dialogue
    - Si vous déployez Copilot en production, stockez les variables dans un gestionnaire de secrets (Supabase, Vercel, Netlify, etc.) pour éviter de commiter les clés dans Git.
    - Regénérez la clé Mistral si elle a été exposée publiquement.
 
-Une fois ces prérequis validés, le chatbot Copilot se connecte automatiquement à l'agent Mistral à chaque ouverture de session et conserve l'identifiant de conversation tant que l'onglet reste ouvert.
+Une fois ces prérequis validés, le chatbot Copilot se connecte automatiquement à l'agent Mistral à chaque ouverture de session et réutilise l'historique des derniers échanges pour contextualiser chaque réponse.
 
 6. **Redémarrer le serveur de développement** (`npm run dev`). À la première connexion, une entrée vide est créée automatiquement dans `app_state` et les espaces Drive/Notes/Organisation apparaissent vides, prêts à être alimentés par l'utilisateur.
 
