@@ -127,6 +127,43 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
 
 5. **Configurer l'agent Mistral** : créez (ou réutilisez) un agent privé dans la console Mistral, notez son identifiant (`ag_...`) puis collez-le dans `VITE_MISTRAL_AGENT_ID`. Le chatbot enverra toutes les requêtes à cet agent, qui peut lui-même orchestrer des outils ou workflows personnalisés.
 
+### Checklist détaillée pour l'intégration Mistral
+
+Pour que je puisse brancher l'agent Mistral et que l'utilisateur puisse dialoguer avec lui sans erreur, merci de préparer l'ensemble des éléments ci-dessous :
+
+1. **Accès Mistral**
+   - Un compte Mistral actif avec accès à l'API privée (`@mistralai/mistralai-private`).
+   - L'API doit être autorisée à appeler l'endpoint `https://api.mistral.ai/` depuis votre environnement (pare-feu/Proxy/allow-list si nécessaire).
+
+2. **Agent configuré**
+   - Un agent conversationnel créé dans la console Mistral (onglet *Agents*).
+   - L'identifiant exact de l'agent (`ag_xxx…`) tel qu'affiché dans la console.
+   - Les outils éventuels que l'agent peut invoquer (fonctions, webhooks) doivent être opérationnels côté serveur.
+
+3. **Clé API**
+   - Une clé API Mistral privée avec les droits d'invocation de l'agent.
+   - Cette clé doit être renseignée dans `VITE_MISTRAL_API_KEY` dans le fichier `.env` (et éventuellement dans votre solution de déploiement). Vérifiez qu'elle n'est pas expirée et qu'elle n'est pas limitée par l'IP de l'environnement de développement.
+
+4. **Variables d'environnement**
+   - `VITE_MISTRAL_API_KEY` : la clé API mentionnée ci-dessus.
+   - `VITE_MISTRAL_AGENT_ID` : l'identifiant `ag_…` de l'agent.
+   - (Optionnel) `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_SUPABASE_STORAGE_BUCKET` déjà configurés pour la persistance.
+   - Assurez-vous que le fichier `.env` est chargé avant de lancer `npm run dev` (redémarrer Vite après modification).
+
+5. **Autorisations côté navigateur**
+   - Vérifiez que votre navigateur accepte les requêtes sortantes vers `https://api.mistral.ai` (pas de bloqueur de requêtes/API, pas de VPN bloquant l'hôte).
+   - Si vous utilisez une configuration proxy d'entreprise, indiquez les paramètres nécessaires pour que les requêtes fetch atteignent Mistral.
+
+6. **Tests de connexion**
+   - Depuis votre machine, exécutez un test rapide (ex. `curl https://api.mistral.ai/v1/health` avec le header `Authorization: Bearer <clé>`). Une réponse `200` confirme l'accessibilité du service.
+   - Vérifiez également que l'identifiant d'agent est correct en lançant un script de test similaire à l'extrait TypeScript fourni dans le README.
+
+7. **Sécurité & distribution**
+   - Si vous déployez Copilot en production, stockez les variables dans un gestionnaire de secrets (Supabase, Vercel, Netlify, etc.) pour éviter de commiter les clés dans Git.
+   - Regénérez la clé Mistral si elle a été exposée publiquement.
+
+Une fois ces prérequis validés, le chatbot Copilot se connecte automatiquement à l'agent Mistral à chaque ouverture de session et conserve l'identifiant de conversation tant que l'onglet reste ouvert.
+
 6. **Redémarrer le serveur de développement** (`npm run dev`). À la première connexion, une entrée vide est créée automatiquement dans `app_state` et les espaces Drive/Notes/Organisation apparaissent vides, prêts à être alimentés par l'utilisateur.
 
 ## Tests et qualité
