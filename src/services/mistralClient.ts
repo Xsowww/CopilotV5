@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://api.mistral.ai/v1/beta/conversations";
+const API_ROOT_URL = "https://api.mistral.ai/v1";
 const API_KEY = (import.meta.env.VITE_MISTRAL_API_KEY as string | undefined)?.trim();
 const AGENT_ID = (import.meta.env.VITE_MISTRAL_AGENT_ID as string | undefined)?.trim();
 
@@ -92,7 +92,7 @@ export const mistralClient = {
   async startConversation(input: string): Promise<{ conversationId: string; reply: string }> {
     const headers = buildHeaders();
 
-    const response = await fetch(API_BASE_URL, {
+    const response = await fetch(`${API_ROOT_URL}/agents/${AGENT_ID}/conversations`, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -136,7 +136,7 @@ export const mistralClient = {
       ],
     };
 
-    const messageResponse = await fetch(`${API_BASE_URL}/${conversationId}/messages`, {
+    const messageResponse = await fetch(`${API_ROOT_URL}/conversations/${conversationId}/messages`, {
       method: "POST",
       headers,
       body: JSON.stringify(messagePayload),
@@ -151,7 +151,7 @@ export const mistralClient = {
       );
     }
 
-    const response = await fetch(`${API_BASE_URL}/${conversationId}/responses`, {
+    const response = await fetch(`${API_ROOT_URL}/conversations/${conversationId}/responses`, {
       method: "POST",
       headers,
       body: JSON.stringify({ response_mode: "blocking" }),
