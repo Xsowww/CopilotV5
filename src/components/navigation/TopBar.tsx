@@ -18,7 +18,14 @@ interface NotificationEntry {
 
 export const TopBar = () => {
   const date = format(new Date(), "EEEE d MMMM yyyy", { locale: fr });
-  const { profile, organisation, isSyncing, notifications: systemNotifications, markNotificationsAsRead } = useAppData();
+  const {
+    profile,
+    organisation,
+    isSyncing,
+    isHydrated,
+    notifications: systemNotifications,
+    markNotificationsAsRead,
+  } = useAppData();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   // Ajout : suivi des notifications non lues pour piloter pastille et alerte sonore.
@@ -133,8 +140,11 @@ export const TopBar = () => {
   useEffect(() => {
     const currentKeys = new Set(notifications.map((item) => item.key));
     if (!hydratedNotificationsRef.current) {
+      // Important : on attend la première hydratation Supabase pour fixer la ligne de base.
       knownNotificationsRef.current = currentKeys;
-      hydratedNotificationsRef.current = true;
+      if (isHydrated) {
+        hydratedNotificationsRef.current = true;
+      }
       setUnreadKeys(new Set<string>());
       return;
     }
@@ -166,7 +176,13 @@ export const TopBar = () => {
         setToast({ key: freshest.key, titre: freshest.titre, type: freshest.type });
       }
     }
-  }, [notifications, profile.modeConcentration, profile.notificationsActives, playNotificationSound]);
+  }, [
+    isHydrated,
+    notifications,
+    profile.modeConcentration,
+    profile.notificationsActives,
+    playNotificationSound,
+  ]);
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
