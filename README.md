@@ -59,7 +59,7 @@ Chaque espace fonctionne de manière indépendante, avec des composants dédiés
 - **Drive** : table d'exploration calquée sur iCloud Drive (actions rapides, métadonnées, statut de partage).
 - **Organisation** : vision consolidée du calendrier, des tâches (priorités, statuts) et des rappels.
 - **Notes** : navigation par dossiers et lecture riche des notes.
-- **Chatbot Copilot** : cadran fixe inspiré des assistants iCloud, connecté directement à l'API Mistral pour exécuter les commandes vocales/textuelles.
+- **Chatbot Copilot** : cadran fixe inspiré des assistants iCloud, connecté directement à l'agent Mistral privé configuré pour Copilot.
 - **Authentification** : écran d'inscription/connexion e-mail + mot de passe (Supabase Auth) avec redirection automatique vers le tableau de bord une fois connecté.
 - **Persistance Supabase** : chaque modification est synchronisée en temps réel dans la table `app_state` pour l'utilisateur connecté et rechargée à la connexion, sans recours au stockage local.
 
@@ -82,6 +82,7 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
    VITE_SUPABASE_ANON_KEY="<clé-anon>"
    VITE_SUPABASE_STORAGE_BUCKET="Copilot" # optionnel mais conseillé
    VITE_MISTRAL_API_KEY="<clé-api-mistral>"
+   VITE_MISTRAL_AGENT_ID="<identifiant-agent-mistral>"
    ```
 
 3. **Créer la table de persistance** en exécutant le SQL ci-dessous dans l'onglet _SQL Editor_ :
@@ -124,7 +125,9 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
 
    Ensuite, indiquez le nom du bucket dans `VITE_SUPABASE_STORAGE_BUCKET`. À défaut, les fichiers sont sérialisés en base64 dans `app_state` pour conserver la prévisualisation.
 
-5. **Redémarrer le serveur de développement** (`npm run dev`). À la première connexion, une entrée vide est créée automatiquement dans `app_state` et les espaces Drive/Notes/Organisation apparaissent vides, prêts à être alimentés par l'utilisateur.
+5. **Configurer l'agent Mistral** : créez (ou réutilisez) un agent privé dans la console Mistral, notez son identifiant (`ag_...`) puis collez-le dans `VITE_MISTRAL_AGENT_ID`. Le chatbot enverra toutes les requêtes à cet agent, qui peut lui-même orchestrer des outils ou workflows personnalisés.
+
+6. **Redémarrer le serveur de développement** (`npm run dev`). À la première connexion, une entrée vide est créée automatiquement dans `app_state` et les espaces Drive/Notes/Organisation apparaissent vides, prêts à être alimentés par l'utilisateur.
 
 ## Tests et qualité
 

@@ -3,13 +3,14 @@ import type { FormEvent } from "react";
 import { PiChatTeardropDotsFill, PiPaperPlaneRightFill } from "react-icons/pi";
 import { useAppData } from "../../context/AppDataContext";
 import type { ChatMessage } from "../../types";
-import { mistralClient } from "../../services/mistralClient";
+import { MistralConversationError, mistralClient } from "../../services/mistralClient";
 import { formatRelativeDate } from "../../utils/formatters";
 
 export const CopilotChatbot = () => {
   const { chatMessages, addChatMessage } = useAppData();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -38,21 +39,39 @@ export const CopilotChatbot = () => {
     scrollToBottom();
 
     try {
-      const assistantReply = await mistralClient.createChatCompletion(
-        history.map((chatMessage): { role: "assistant" | "user"; content: string } => ({
-          role: chatMessage.role === "assistant" ? "assistant" : "user",
-          content: chatMessage.contenu,
-        }))
-      );
+      let reply: string;
+
+      if (!conversationId) {
+        const formattedHistory = history
+          .slice(-6)
+          .map((entry) => `${entry.role === "assistant" ? "Assistant" : "Utilisateur"} : ${entry.contenu}`)
+          .join("\n");
+        const initialInput = formattedHistory || message.contenu;
+
+        const { conversationId: newConversationId, reply: firstReply } = await mistralClient.startConversation(
+          initialInput
+        );
+        setConversationId(newConversationId);
+        reply = firstReply;
+      } else {
+        const { reply: followUpReply } = await mistralClient.continueConversation(
+          conversationId,
+          message.contenu
+        );
+        reply = followUpReply;
+      }
 
       addChatMessage({
         id: crypto.randomUUID(),
         role: "assistant",
-        contenu: assistantReply,
+        contenu: reply,
         horodatage: new Date().toISOString(),
       });
     } catch (error) {
       console.error("Erreur Mistral", error);
+      if (error instanceof MistralConversationError && error.shouldResetConversation) {
+        setConversationId(null);
+      }
       addChatMessage({
         id: crypto.randomUUID(),
         role: "assistant",
