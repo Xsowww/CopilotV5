@@ -80,7 +80,7 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
    ```bash
    VITE_SUPABASE_URL="https://<votre-instance>.supabase.co"
    VITE_SUPABASE_ANON_KEY="<clé-anon>"
-   VITE_SUPABASE_STORAGE_BUCKET="drive-previews" # optionnel mais conseillé
+   VITE_SUPABASE_STORAGE_BUCKET="Copilot" # optionnel mais conseillé
    ```
 
 3. **Créer la table de persistance** en exécutant le SQL ci-dessous dans l'onglet _SQL Editor_ :
@@ -105,7 +105,10 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
      for select using (auth.uid() = user_id);
 
    create policy "Utilisation écriture" on app_state
-     for upsert using (auth.uid() = user_id);
+     for insert with check (auth.uid() = user_id);
+
+   create policy "Utilisation mise à jour" on app_state
+     for update using (auth.uid() = user_id);
 
    -- Si la table existait déjà sans colonne `notifications`, exécutez également :
    alter table app_state
@@ -115,7 +118,7 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
 4. **(Optionnel) Créer un bucket de stockage** si vous souhaitez externaliser les fichiers importés :
 
    ```sql
-   select storage.create_bucket('drive-previews', true, 'public');
+   select storage.create_bucket('Copilot', true, 'public');
    ```
 
    Ensuite, indiquez le nom du bucket dans `VITE_SUPABASE_STORAGE_BUCKET`. À défaut, les fichiers sont sérialisés en base64 dans `app_state` pour conserver la prévisualisation.
