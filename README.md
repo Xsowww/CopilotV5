@@ -40,7 +40,7 @@ src/
 │   └── Organisation/
 │       └── OrganisationPage.tsx
 ├── services/
-│   ├── mockApi.ts
+│   ├── mistralClient.ts
 │   └── supabaseClient.ts
 ├── types/
 │   └── index.ts
@@ -51,7 +51,7 @@ src/
 └── main.tsx
 ```
 
-Chaque espace fonctionne de manière indépendante, avec des composants dédiés. Toutes les données métiers (drive, notes, organisation, profil, mise en page, messages du chatbot) sont sérialisées par utilisateur et stockées dans Supabase via `AppDataContext`. Le service `mockApi` ne sert plus qu'à alimenter les réponses factices du chatbot tant qu'une intégration Perplexity n'est pas branchée.
+Chaque espace fonctionne de manière indépendante, avec des composants dédiés. Toutes les données métiers (drive, notes, organisation, profil, mise en page, messages du chatbot) sont sérialisées par utilisateur et stockées dans Supabase via `AppDataContext`. Le chatbot s'appuie désormais sur le client `mistralClient` pour déléguer les requêtes à l'API officielle de Mistral.
 
 ## Fonctionnalités
 
@@ -59,7 +59,7 @@ Chaque espace fonctionne de manière indépendante, avec des composants dédiés
 - **Drive** : table d'exploration calquée sur iCloud Drive (actions rapides, métadonnées, statut de partage).
 - **Organisation** : vision consolidée du calendrier, des tâches (priorités, statuts) et des rappels.
 - **Notes** : navigation par dossiers et lecture riche des notes.
-- **Chatbot Copilot** : cadran fixe inspiré des assistants iCloud, connecté à l'API mock pour simuler les commandes vocales/textuelles.
+- **Chatbot Copilot** : cadran fixe inspiré des assistants iCloud, connecté directement à l'API Mistral pour exécuter les commandes vocales/textuelles.
 - **Authentification** : écran d'inscription/connexion e-mail + mot de passe (Supabase Auth) avec redirection automatique vers le tableau de bord une fois connecté.
 - **Persistance Supabase** : chaque modification est synchronisée en temps réel dans la table `app_state` pour l'utilisateur connecté et rechargée à la connexion, sans recours au stockage local.
 
@@ -81,6 +81,7 @@ L'application est disponible sur [http://localhost:5173](http://localhost:5173) 
    VITE_SUPABASE_URL="https://<votre-instance>.supabase.co"
    VITE_SUPABASE_ANON_KEY="<clé-anon>"
    VITE_SUPABASE_STORAGE_BUCKET="Copilot" # optionnel mais conseillé
+   VITE_MISTRAL_API_KEY="<clé-api-mistral>"
    ```
 
 3. **Créer la table de persistance** en exécutant le SQL ci-dessous dans l'onglet _SQL Editor_ :

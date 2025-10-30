@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { PiChatTeardropDotsFill, PiPaperPlaneRightFill } from "react-icons/pi";
 import { useAppData } from "../../context/AppDataContext";
 import type { ChatMessage } from "../../types";
-import { mockApi } from "../../services/mockApi";
+import { mistralClient } from "../../services/mistralClient";
 import { formatRelativeDate } from "../../utils/formatters";
 
 export const CopilotChatbot = () => {
@@ -30,15 +30,40 @@ export const CopilotChatbot = () => {
       horodatage: new Date().toISOString(),
     };
 
+    const history = [...chatMessages, message];
+
     addChatMessage(message);
     setInput("");
     setLoading(true);
     scrollToBottom();
 
-    const response = await mockApi.sendChatMessage(message.contenu);
-    addChatMessage(response);
-    setLoading(false);
-    scrollToBottom();
+    try {
+      const assistantReply = await mistralClient.createChatCompletion(
+        history.map((chatMessage): { role: "assistant" | "user"; content: string } => ({
+          role: chatMessage.role === "assistant" ? "assistant" : "user",
+          content: chatMessage.contenu,
+        }))
+      );
+
+      addChatMessage({
+        id: crypto.randomUUID(),
+        role: "assistant",
+        contenu: assistantReply,
+        horodatage: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Erreur Mistral", error);
+      addChatMessage({
+        id: crypto.randomUUID(),
+        role: "assistant",
+        contenu:
+          "Je n'ai pas réussi à contacter Mistral. Vérifie ta connexion ainsi que la clé API, puis réessaie dans un instant.",
+        horodatage: new Date().toISOString(),
+      });
+    } finally {
+      setLoading(false);
+      scrollToBottom();
+    }
   };
 
   useEffect(() => {
